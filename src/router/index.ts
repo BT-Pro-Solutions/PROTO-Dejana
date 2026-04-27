@@ -63,6 +63,31 @@ const router = createRouter({
           name: 'account',
           component: () => import('../views/MyAccountView.vue'),
         },
+        {
+          path: 'privacy-policy',
+          name: 'privacy-policy',
+          component: () => import('../views/LegalInfoPageView.vue'),
+        },
+        {
+          path: 'terms-and-conditions',
+          name: 'terms-and-conditions',
+          component: () => import('../views/LegalInfoPageView.vue'),
+        },
+        {
+          path: 'shipping-policy',
+          name: 'shipping-policy',
+          component: () => import('../views/LegalInfoPageView.vue'),
+        },
+        {
+          path: 'returns-policy',
+          name: 'returns-policy',
+          component: () => import('../views/LegalInfoPageView.vue'),
+        },
+        {
+          path: ':pathMatch(.*)*',
+          name: 'not-found',
+          component: () => import('../views/NotFoundView.vue'),
+        },
       ],
     },
     {

@@ -1,5 +1,13 @@
 <script setup lang="ts">
+import { RouterLink } from 'vue-router'
 import { media } from '../assets/media'
+
+const policyLinks = [
+  { to: '/privacy-policy', label: 'Privacy Policy' },
+  { to: '/terms-and-conditions', label: 'Terms & Conditions' },
+  { to: '/shipping-policy', label: 'Shipping Policy' },
+  { to: '/returns-policy', label: 'Returns Policy' },
+] as const
 
 const categories = [
   'Van Interiors',
@@ -61,7 +69,12 @@ const support = [
       </div>
     </div>
     <div class="footer__legal">
-      <p>
+      <nav class="footer__policies" aria-label="Policies">
+        <RouterLink v-for="link in policyLinks" :key="link.to" :to="link.to" class="footer__policy-link">
+          {{ link.label }}
+        </RouterLink>
+      </nav>
+      <p class="footer__copyline">
         © 2026 Dejana Truck & Utility Equipment <span class="footer__sep">|</span>
         * Any Shipping Disclaimers Could Go Here
       </p>
@@ -194,7 +207,27 @@ const support = [
   font-size: 12px;
 }
 
-.footer__legal p {
+.footer__policies {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px 14px;
+  margin-bottom: 16px;
+}
+
+.footer__policy-link {
+  color: inherit;
+  text-decoration: none;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.footer__policy-link:hover {
+  text-decoration: underline;
+}
+
+.footer__copyline {
   margin: 0;
   line-height: 1.5;
 }

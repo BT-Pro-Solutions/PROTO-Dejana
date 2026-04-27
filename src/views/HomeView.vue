@@ -1,8 +1,85 @@
 <script setup lang="ts">
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import ProductHorizontalStrip from '../components/ProductHorizontalStrip.vue'
 import { media } from '../assets/media'
 import { homeBestSellers } from '../data/site'
+
+type HeroSlide = {
+  id: string
+  image: string
+  /** Snow splash graphic — only the snow slide uses this; anchored to bottom of hero */
+  snowBlend?: string
+  eyebrow: string
+  title: string
+  sub: string
+  cta: { label: string; to: string }
+}
+
+const heroSlides: HeroSlide[] = [
+  {
+    id: 'snow',
+    image: media.pages.homeHeroBg,
+    snowBlend: media.pages.homeHeroBlend,
+    eyebrow: 'NOW SHIPPING',
+    title: 'Snow & Ice Equipment',
+    sub:
+      "Engineered for the pros who can't afford downtime. Professional upfits, durable hardware, and immediate inventory for your fleet.",
+    cta: { label: 'Browse All Inventory', to: '/search' },
+  },
+  {
+    id: 'gearboxes',
+    image: media.pages.categoryGearbox,
+    eyebrow: 'INDUSTRIAL POWER',
+    title: 'Gearboxes & Motors',
+    sub: 'Durable gearboxes and high-performance motors for demanding fleet and industrial applications.',
+    cta: { label: 'Shop gearboxes', to: '/category/gearboxes' },
+  },
+  {
+    id: 'lighting',
+    image: media.pages.categoryLightingRect,
+    eyebrow: 'FLEET VISIBILITY',
+    title: 'Lighting & Electrical',
+    sub: 'See and be seen with state-of-the-art lighting and electrical hardware built for work trucks.',
+    cta: { label: 'Shop lighting', to: '/category/lighting' },
+  },
+]
+
+const HERO_ROTATE_MS = 7000
+
+const activeIndex = ref(0)
+const currentSlide = computed(() => heroSlides[activeIndex.value]!)
+
+let rotateTimer: ReturnType<typeof setInterval> | undefined
+
+function clearRotate() {
+  if (rotateTimer !== undefined) {
+    window.clearInterval(rotateTimer)
+    rotateTimer = undefined
+  }
+}
+
+function startRotate() {
+  clearRotate()
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  rotateTimer = window.setInterval(() => {
+    activeIndex.value = (activeIndex.value + 1) % heroSlides.length
+  }, HERO_ROTATE_MS)
+}
+
+function goToSlide(i: number) {
+  const n = heroSlides.length
+  activeIndex.value = ((i % n) + n) % n
+  startRotate()
+}
+
+onMounted(() => {
+  startRotate()
+})
+
+onUnmounted(() => {
+  clearRotate()
+})
 
 const categories = [
   {
@@ -31,29 +108,73 @@ const categories = [
 
 <template>
   <div class="home">
-    <section class="hero">
-      <div class="hero__bg" aria-hidden="true">
-        <img class="hero__photo" :src="media.pages.homeHeroBg" alt="" />
-        <div class="hero__gradient" />
-        <div class="hero__blend" :style="{ backgroundImage: `url(${media.pages.homeHeroBlend})` }" />
-      </div>
-      <div class="hero__content">
-        <div class="hero__inner">
-          <p class="hero__eyebrow">NOW SHIPPING</p>
-          <h1 class="hero__title">Snow & Ice Equipment</h1>
-          <p class="hero__sub">
-            Engineered for the pros who can't afford downtime.<br />
-            Professional upfits, durable hardware, and immediate<br />
-            inventory for your fleet.
-          </p>
-          <RouterLink to="/search" class="hero__btn">
-            Browse All Inventory
-            <img :src="media.icons.btnArrow" width="16" height="16" alt="" />
-          </RouterLink>
+    <section
+      class="hero"
+      aria-roledescription="carousel"
+      :aria-label="`Featured stories, slide ${activeIndex + 1} of ${heroSlides.length}`"
+    >
+      <div class="hero__slides" aria-hidden="true">
+        <div
+          v-for="(slide, i) in heroSlides"
+          :key="slide.id"
+          class="hero__slide"
+          :class="{ 'hero__slide--active': i === activeIndex }"
+        >
+          <div class="hero__slide-photo-wrap">
+            <img class="hero__slide-photo" :src="slide.image" alt="" />
+          </div>
+          <div class="hero__slide-gradient" />
+          <div class="hero__slide-vignette" aria-hidden="true" />
+          <div
+            v-if="slide.snowBlend"
+            class="hero__slide-snow"
+            :style="{ backgroundImage: `url(${slide.snowBlend})` }"
+          />
         </div>
       </div>
-      <div class="hero__scroll" aria-hidden="true">
-        <img :src="media.icons.heroChevrons" width="120" height="20" alt="" />
+
+      <div class="hero__content">
+        <Transition name="hero-txt" mode="out-in">
+          <div :key="currentSlide.id" class="hero__inner">
+            <p class="hero__eyebrow">{{ currentSlide.eyebrow }}</p>
+            <h1 class="hero__title">{{ currentSlide.title }}</h1>
+            <p class="hero__sub">{{ currentSlide.sub }}</p>
+            <RouterLink :to="currentSlide.cta.to" class="hero__btn">
+              {{ currentSlide.cta.label }}
+              <svg
+                class="hero__btn-arrow"
+                width="18"
+                height="14"
+                viewBox="0 0 18 14"
+                fill="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M1 7h12M10 2l6 5-6 5"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </RouterLink>
+          </div>
+        </Transition>
+      </div>
+
+      <div class="hero__dots" role="tablist" aria-label="Choose hero slide">
+        <button
+          v-for="(slide, i) in heroSlides"
+          :key="'dot-' + slide.id"
+          type="button"
+          role="tab"
+          class="hero__dot"
+          :class="{ 'hero__dot--active': i === activeIndex }"
+          :aria-selected="i === activeIndex"
+          :tabindex="i === activeIndex ? 0 : -1"
+          :aria-label="`Show slide ${i + 1}: ${slide.title}`"
+          @click="goToSlide(i)"
+        />
       </div>
     </section>
 
@@ -186,7 +307,7 @@ const categories = [
 
 .hero {
   position: relative;
-  min-height: 700px;
+  min-height: clamp(440px, 85vh, 700px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -194,39 +315,204 @@ const categories = [
   color: #fff;
 }
 
-.hero__bg {
+@media (min-width: 900px) {
+  .hero {
+    min-height: 700px;
+  }
+}
+
+.hero__slides {
   position: absolute;
   inset: 0;
 }
 
-.hero__photo {
+.hero__slide {
   position: absolute;
   inset: 0;
+  opacity: 0;
+  transition: opacity 0.65s ease;
+  pointer-events: none;
+}
+
+.hero__slide--active {
+  opacity: 1;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__slide {
+    transition: opacity 0.04s ease;
+  }
+}
+
+/** Centered photo band — letterbox sides use brand blue; max width limits stretch on ultrawide */
+.hero__slide-photo-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  background: var(--color-dark-blue);
+}
+
+.hero__slide-photo {
   width: 100%;
+  max-width: 1440px;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+  flex-shrink: 0;
 }
 
-.hero__gradient {
+/* Edge feather only when photo is letterboxed (visible side bands) */
+@media (min-width: 1441px) {
+  .hero__slide-photo {
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 clamp(56px, 8vw, 160px),
+      #000 calc(100% - clamp(56px, 8vw, 160px)),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      90deg,
+      transparent 0,
+      #000 clamp(56px, 8vw, 160px),
+      #000 calc(100% - clamp(56px, 8vw, 160px)),
+      transparent 100%
+    );
+    mask-size: 100% 100%;
+    -webkit-mask-size: 100% 100%;
+  }
+}
+
+.hero__slide-gradient {
   position: absolute;
   inset: 0;
+  z-index: 1;
+  pointer-events: none;
   background: linear-gradient(90deg, #001e40 0%, rgba(0, 30, 64, 0.55) 45%, rgba(0, 30, 64, 0) 100%);
 }
 
-.hero__blend {
+/** Wide viewports: edge bands go fully to navy (opaque near edges, long fade inward) */
+.hero__slide-vignette {
+  display: none;
   position: absolute;
   inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image:
+    linear-gradient(
+      to right,
+      #001e40 0%,
+      #001e40 min(5%, 72px),
+      rgba(0, 30, 64, 0.92) 12%,
+      rgba(0, 30, 64, 0.55) 22%,
+      rgba(0, 30, 64, 0.18) 34%,
+      transparent 46%
+    ),
+    linear-gradient(
+      to left,
+      #001e40 0%,
+      #001e40 min(5%, 72px),
+      rgba(0, 30, 64, 0.92) 12%,
+      rgba(0, 30, 64, 0.55) 22%,
+      rgba(0, 30, 64, 0.18) 34%,
+      transparent 46%
+    );
+}
+
+/* When photo hits max-width, side bands appear — reinforce edge falloff to navy */
+@media (min-width: 1441px) {
+  .hero__slide-vignette {
+    display: block;
+  }
+}
+
+/** Snow splash: tile horizontally at natural scale (no upscale), anchored to bottom */
+.hero__slide-snow {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: clamp(160px, 42vh, 480px);
+  background-repeat: repeat-x;
+  background-position: center bottom;
+  background-size: auto 100%;
   mix-blend-mode: lighten;
-  background-size: cover;
-  background-position: top left;
-  opacity: 0.9;
+  pointer-events: none;
+  z-index: 3;
 }
 
 .hero__content {
   position: relative;
+  z-index: 2;
   width: 100%;
   max-width: var(--layout-max-width);
-  padding: 48px clamp(24px, 5vw, 60px);
+  padding: clamp(72px, 12vw, 120px) var(--space-page-x) calc(64px + clamp(40px, 8vw, 56px));
+}
+
+.hero__dots {
+  position: absolute;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(228, 231, 236, 0.96);
+  box-shadow: 0 1px 4px rgba(0, 30, 64, 0.08);
+}
+
+.hero__dot {
+  width: 10px;
+  height: 10px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: #9aa5b5;
+  cursor: pointer;
+  transition:
+    width 0.25s ease,
+    background 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.hero__dot:hover {
+  background: #7c8a9e;
+}
+
+.hero__dot--active {
+  width: 28px;
+  background: #6eb3e8;
+  opacity: 1;
+}
+
+.hero__dot:focus-visible {
+  outline: 2px solid var(--color-light-blue);
+  outline-offset: 2px;
+}
+
+.hero-txt-enter-active,
+.hero-txt-leave-active {
+  transition: opacity 0.35s ease;
+}
+
+.hero-txt-enter-from,
+.hero-txt-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-txt-enter-active,
+  .hero-txt-leave-active {
+    transition: opacity 0.05s ease;
+  }
 }
 
 .hero__inner {
@@ -268,7 +554,7 @@ const categories = [
   align-self: flex-start;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 16px 32px;
   border-radius: var(--radius-lg);
   text-decoration: none;
@@ -277,16 +563,11 @@ const categories = [
   background: linear-gradient(167deg, rgb(6, 50, 100) 0%, rgb(20, 86, 152) 100%);
 }
 
-.hero__btn img {
-  filter: brightness(10);
-}
-
-.hero__scroll {
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0.85;
+.hero__btn-arrow {
+  flex-shrink: 0;
+  display: block;
+  margin-top: 1px;
+  opacity: 0.95;
 }
 
 .section {
@@ -449,7 +730,7 @@ const categories = [
   align-items: center;
   justify-content: space-between;
   gap: clamp(24px, 4vw, 48px);
-  padding: 0 30px;
+  padding: 0 var(--space-page-x);
   max-height: 1400px;
 }
 
@@ -530,6 +811,10 @@ const categories = [
 }
 
 @media (max-width: 767px) {
+  .hero__slide-gradient {
+  background: linear-gradient(120deg, rgba(0, 19, 40, 0.9) 0%, rgba(0, 30, 64, .7) 100%);
+}
+
   .service__bg-deco {
     display: none;
   }
@@ -540,11 +825,14 @@ const categories = [
 
   .service {
     justify-content: center;
+    padding: 0;
   }
 
   .service__panel {
     max-width: none;
     width: 100%;
+    border-radius: 0!important;
+    border-top: 2px solid var(--color-border);
   }
 }
 
@@ -553,7 +841,7 @@ const categories = [
   max-width: 601px;
   background: #fff;
   border-radius: clamp(36px, 4vw, 48px);
-  padding: 50px;
+  padding: clamp(28px, 7vw, 50px);
   position: relative;
   z-index: 2;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
@@ -715,5 +1003,11 @@ const categories = [
 .heritage__btn-arrow {
   flex-shrink: 0;
   opacity: 0.95;
+}
+
+@media (max-width: 767px) {
+  .heritage__fade {
+    background: linear-gradient( 45deg, #fff 50%, rgba(255, 255, 255, 0) );
+  }
 }
 </style>

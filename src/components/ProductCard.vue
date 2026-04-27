@@ -151,7 +151,7 @@ function toggleCompare(e: MouseEvent) {
 .card--listing {
   width: 100%;
   max-width: 320px;
-  min-width: 260px;
+  min-width: 0;
 }
 
 .card--category {

@@ -257,7 +257,9 @@ const count = computed(() => favoriteProducts.value.length)
 }
 
 .sort__select {
-  min-width: 200px;
+  width: 100%;
+  max-width: 320px;
+  min-width: 0;
   padding: 11px 40px 11px 14px;
   border-radius: 4px;
   border: 1px solid #d9dee5;

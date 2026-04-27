@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, inject, onMounted, onUnmounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, inject, onMounted, onUnmounted, ref, watch } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { media } from '../assets/media'
 import { headerShopCategoryLinks } from '../data/shopCategoryPage'
 import { authKey } from '../layout/auth'
@@ -20,6 +20,9 @@ const search = inject(searchModalKey, null)
 const miniCart = inject(miniCartKey, null)
 const auth = inject(authKey, null)
 const router = useRouter()
+const route = useRoute()
+
+const mobileNavOpen = ref(false)
 
 /** Injected auth is a plain object; nested refs must use .value (template does not unwrap them). */
 const accountLoggedIn = computed(() => !!auth && auth.isLoggedIn.value)
@@ -44,8 +47,47 @@ function onDocumentClick(e: MouseEvent) {
   if (e.target instanceof Node && !el.contains(e.target)) closeAccountMenu()
 }
 
-onMounted(() => document.addEventListener('click', onDocumentClick))
-onUnmounted(() => document.removeEventListener('click', onDocumentClick))
+function closeMobileNav() {
+  mobileNavOpen.value = false
+}
+
+function toggleMobileNav() {
+  mobileNavOpen.value = !mobileNavOpen.value
+}
+
+watch(mobileNavOpen, (open) => {
+  if (open) {
+    accountMenuOpen.value = false
+    document.documentElement.style.overflow = 'hidden'
+  } else if (!miniCart?.isOpen.value) {
+    document.documentElement.style.overflow = ''
+  }
+})
+
+watch(
+  () => route.fullPath,
+  () => {
+    mobileNavOpen.value = false
+  },
+)
+
+function onEscapeNav(e: KeyboardEvent) {
+  if (e.key !== 'Escape' || !mobileNavOpen.value) return
+  e.preventDefault()
+  closeMobileNav()
+}
+
+onMounted(() => {
+  document.addEventListener('click', onDocumentClick)
+  document.addEventListener('keydown', onEscapeNav, true)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', onDocumentClick)
+  document.removeEventListener('keydown', onEscapeNav, true)
+  if (!miniCart?.isOpen.value) {
+    document.documentElement.style.overflow = ''
+  }
+})
 
 function onLogout() {
   auth?.logout()
@@ -58,13 +100,23 @@ function onLogout() {
   <header class="header">
     <div class="header__shell header__shell--top">
       <div class="header__top">
+        <button
+          type="button"
+          class="header__nav-toggle"
+          aria-label="Menu"
+          :aria-expanded="mobileNavOpen"
+          aria-controls="site-mobile-nav"
+          @click="toggleMobileNav"
+        >
+          <span class="header__nav-toggle-bars" aria-hidden="true" />
+        </button>
         <div class="header__brand-search">
           <RouterLink to="/" class="header__logo">
             <img :src="media.headerLogo" alt="Dejana Truck & Utility Equipment" width="150" height="39" />
           </RouterLink>
           <button
             type="button"
-            class="header__search"
+            class="header__search header__search--bar"
             aria-label="Open search"
             @click="search?.open()"
           >
@@ -98,6 +150,15 @@ function onLogout() {
               <RouterLink to="/account" class="header__account-link" role="menuitem" @click="closeAccountMenu"
                 >My Account</RouterLink
               >
+              <RouterLink
+                to="/favorites"
+                class="header__account-link header__account-link--row"
+                role="menuitem"
+                @click="closeAccountMenu"
+              >
+                <span>Favorites</span>
+                <span v-if="(favoritesCount ?? 0) > 0" class="header__account-fav-badge">{{ favoritesCount }}</span>
+              </RouterLink>
               <button
                 type="button"
                 class="header__account-link header__account-link--btn"
@@ -116,14 +177,14 @@ function onLogout() {
           >
             <img :src="media.icons.user" width="20" height="20" alt="" />
           </RouterLink>
-          <RouterLink
-            to="/favorites"
-            class="header__icon-btn header__icon-btn--favorites"
-            :aria-label="'Favorites, ' + (favoritesCount ?? 0) + ' items'"
+          <button
+            type="button"
+            class="header__icon-btn header__icon-btn--search"
+            aria-label="Open search"
+            @click="search?.open()"
           >
-            <img :src="media.icons.wishlistHeart" width="20" height="18" alt="" />
-            <span v-if="(favoritesCount ?? 0) > 0" class="header__fav-badge">{{ favoritesCount }}</span>
-          </RouterLink>
+            <img :src="media.icons.search" width="20" height="20" alt="" />
+          </button>
           <button
             type="button"
             class="header__icon-btn header__icon-btn--cart"
@@ -249,6 +310,126 @@ function onLogout() {
       </nav>
     </div>
   </header>
+
+  <Teleport to="body">
+    <Transition name="header-drawer">
+      <div
+        v-if="mobileNavOpen"
+        id="site-mobile-nav"
+        class="header-mnav"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Site menu"
+      >
+        <div class="header-mnav__backdrop" aria-hidden="true" @click="closeMobileNav" />
+        <div class="header-mnav__panel">
+          <div class="header-mnav__head">
+            <span class="header-mnav__title">Menu</span>
+            <button type="button" class="header-mnav__close" aria-label="Close menu" @click="closeMobileNav">
+              ×
+            </button>
+          </div>
+          <nav class="header-mnav__nav" aria-label="Primary mobile">
+            <RouterLink
+              to="/"
+              class="header-mnav__link"
+              :class="{ 'header-mnav__link--active': activeNav === 'home' }"
+              @click="closeMobileNav"
+              >Home</RouterLink
+            >
+            <details class="header-mnav__details">
+              <summary class="header-mnav__summary">Shop by category</summary>
+              <div class="header-mnav__sub">
+                <RouterLink
+                  v-for="item in headerShopCategoryLinks"
+                  :key="item.to"
+                  :to="item.to"
+                  class="header-mnav__sublink"
+                  @click="closeMobileNav"
+                >
+                  {{ item.label }}
+                </RouterLink>
+              </div>
+            </details>
+            <RouterLink
+              to="/shop"
+              class="header-mnav__link header-mnav__link--muted"
+              :class="{ 'header-mnav__link--active': activeNav === 'shop' || activeNav === 'category' }"
+              @click="closeMobileNav"
+              >Shop overview</RouterLink
+            >
+            <RouterLink
+              to="/new-arrivals"
+              class="header-mnav__link"
+              :class="{ 'header-mnav__link--active': activeNav === 'new-arrivals' }"
+              @click="closeMobileNav"
+              >New Arrivals</RouterLink
+            >
+            <RouterLink
+              to="/favorites"
+              class="header-mnav__link"
+              :class="{ 'header-mnav__link--active': activeNav === 'favorites' }"
+              @click="closeMobileNav"
+              >Favorites</RouterLink
+            >
+            <a
+              href="https://dejana.com/about-us/"
+              class="header-mnav__link header-mnav__link--external"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="closeMobileNav"
+            >
+              About Us
+              <svg
+                class="header-mnav__ext"
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <path d="M15 3h6v6" />
+                <path d="M10 14 21 3" />
+              </svg>
+            </a>
+            <a
+              href="https://dejana.com/contact-us/"
+              class="header-mnav__link header-mnav__link--external"
+              target="_blank"
+              rel="noopener noreferrer"
+              @click="closeMobileNav"
+            >
+              Contact
+              <svg
+                class="header-mnav__ext"
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                aria-hidden="true"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                <path d="M15 3h6v6" />
+                <path d="M10 14 21 3" />
+              </svg>
+            </a>
+          </nav>
+          <div class="header-mnav__foot">
+            <p class="header-mnav__ship">
+              <img :src="media.icons.shippingFast" width="18" height="18" alt="" />
+              <span>FREE Shipping within 24 hrs*</span>
+            </p>
+            <a href="tel:+18773352821" class="header-mnav__phone">(877) 335-2821</a>
+          </div>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
 </template>
 
 <style scoped>
@@ -278,10 +459,93 @@ function onLogout() {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px 24px;
+  gap: 12px 20px;
   min-height: 92px;
   padding: 0 var(--header-pad-x, 30px);
   box-sizing: border-box;
+}
+
+@media (max-width: 1023px) {
+  .header__top {
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-height: 56px;
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+  }
+
+  .header__brand-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 8px;
+    padding-right: 0;
+  }
+
+  .header__logo img {
+    max-height: 30px;
+  }
+
+  .header__actions {
+    flex-wrap: nowrap;
+    flex-shrink: 0;
+    gap: 0;
+  }
+
+  .header__nav-toggle {
+    width: 40px;
+    height: 40px;
+  }
+
+  .header__icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .header__account-trigger {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.header__nav-toggle {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-dark-blue);
+  cursor: pointer;
+}
+
+.header__nav-toggle:hover {
+  background: rgba(0, 30, 64, 0.06);
+}
+
+.header__nav-toggle-bars {
+  display: block;
+  width: 20px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  box-shadow:
+    0 -7px 0 currentColor,
+    0 7px 0 currentColor;
+}
+
+@media (max-width: 1023px) {
+  .header__nav-toggle {
+    display: flex;
+  }
+
+  .header__shell--nav {
+    display: none;
+  }
 }
 
 .header__brand-search {
@@ -319,6 +583,22 @@ function onLogout() {
   border-radius: var(--radius-sm);
   cursor: pointer;
   text-align: left;
+}
+
+@media (max-width: 1023px) {
+  .header__search--bar {
+    display: none;
+  }
+}
+
+.header__icon-btn--search {
+  display: none;
+}
+
+@media (max-width: 1023px) {
+  .header__icon-btn--search {
+    display: flex;
+  }
 }
 
 .header__search-placeholder {
@@ -444,7 +724,7 @@ function onLogout() {
   right: 0;
   top: calc(100% + 8px);
   z-index: 400;
-  min-width: 180px;
+  min-width: 200px;
   padding: 8px 0;
   background: #fff;
   color: var(--color-dark-blue);
@@ -484,6 +764,27 @@ function onLogout() {
   letter-spacing: 0.04em;
 }
 
+.header__account-link--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header__account-fav-badge {
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
 .header__icon-btn--account {
   text-decoration: none;
   color: inherit;
@@ -491,27 +792,6 @@ function onLogout() {
 
 .header__icon-btn--cart {
   text-decoration: none;
-}
-
-.header__icon-btn--favorites {
-  text-decoration: none;
-  position: relative;
-}
-
-.header__fav-badge {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 12px;
-  background: #dc2626;
-  color: #fff;
-  font-size: 10px;
-  line-height: 16px;
-  letter-spacing: -0.4px;
-  text-align: center;
 }
 
 .header__cart-badge {
@@ -705,5 +985,232 @@ function onLogout() {
   .header__ship {
     display: flex;
   }
+}
+
+/* —— Mobile off-canvas nav (teleported) —— */
+.header-mnav {
+  position: fixed;
+  inset: 0;
+  z-index: 360;
+  display: flex;
+  pointer-events: auto;
+}
+
+.header-mnav__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 20, 40, 0.5);
+}
+
+.header-mnav__panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  width: min(20rem, calc(100vw - 48px));
+  max-width: 100%;
+  height: 100%;
+  max-height: 100dvh;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--color-dark-blue);
+  color: #fff;
+  box-shadow: 8px 0 32px rgba(0, 20, 40, 0.25);
+}
+
+.header-mnav__head {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.header-mnav__title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.9;
+}
+
+.header-mnav__close {
+  width: 44px;
+  height: 44px;
+  margin: -8px -10px -8px 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: #fff;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.header-mnav__close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.header-mnav__nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 0 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.header-mnav__link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 22px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #fff;
+  text-decoration: none;
+  border-left: 4px solid transparent;
+}
+
+.header-mnav__link--muted {
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.85;
+  padding-top: 4px;
+  padding-bottom: 10px;
+}
+
+.header-mnav__link--active {
+  border-left-color: var(--color-light-blue);
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.header-mnav__link--external {
+  opacity: 0.95;
+}
+
+.header-mnav__ext {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.header-mnav__details {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.header-mnav__summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+  padding: 14px 22px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.header-mnav__summary::-webkit-details-marker {
+  display: none;
+}
+
+.header-mnav__summary::after {
+  content: '';
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(255, 255, 255, 0.7);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.7);
+  transform: rotate(45deg);
+  transition: transform 0.15s ease;
+}
+
+.header-mnav__details[open] .header-mnav__summary::after {
+  transform: rotate(-135deg);
+}
+
+.header-mnav__sub {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 12px 8px;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.header-mnav__sublink {
+  padding: 10px 22px 10px 26px;
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+}
+
+.header-mnav__sublink:hover,
+.header-mnav__sublink:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+  outline: none;
+}
+
+.header-mnav__foot {
+  flex-shrink: 0;
+  padding: 16px 22px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.header-mnav__ship {
+  margin: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.header-mnav__ship img {
+  flex-shrink: 0;
+  margin-top: 2px;
+  filter: brightness(10);
+}
+
+.header-mnav__phone {
+  font-size: 18px;
+  font-weight: 800;
+  color: #a7c8ff;
+  text-decoration: none;
+}
+
+.header-mnav__phone:hover {
+  text-decoration: underline;
+}
+
+.header-drawer-enter-active,
+.header-drawer-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.header-drawer-enter-active .header-mnav__panel,
+.header-drawer-leave-active .header-mnav__panel {
+  transition: transform 0.22s ease;
+}
+
+.header-drawer-enter-from,
+.header-drawer-leave-to {
+  opacity: 0;
+}
+
+.header-drawer-enter-from .header-mnav__panel,
+.header-drawer-leave-to .header-mnav__panel {
+  transform: translateX(-100%);
 }
 </style>

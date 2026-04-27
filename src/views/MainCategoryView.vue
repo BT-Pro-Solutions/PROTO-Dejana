@@ -86,10 +86,7 @@ import {
       <section class="newsletter" aria-labelledby="newsletter-heading">
         <div class="newsletter__inner">
           <div class="newsletter__copy">
-            <h2 id="newsletter-heading" class="newsletter__h">
-              STAY AHEAD OF THE<br />
-              PACK
-            </h2>
+            <h2 id="newsletter-heading" class="newsletter__h">Stay ahead of the pack</h2>
             <p class="newsletter__lead">
               Join 5,000+ professionals getting exclusive first access to flash sales, new product engineering
               reveals, and technical fleet guides.
@@ -132,7 +129,7 @@ import {
 .page__inner {
   max-width: var(--layout-max-width);
   margin: 0 auto;
-  padding: 48px 32px 0;
+  padding: clamp(24px, 5vw, 48px) var(--space-page-x) 0;
   box-sizing: border-box;
 }
 
@@ -165,10 +162,10 @@ import {
 .h1 {
   margin: 0;
   padding-top: 8px;
-  font-size: 36px;
+  font-size: clamp(28px, 6vw, 36px);
   font-weight: 400;
   letter-spacing: -0.9px;
-  line-height: 40px;
+  line-height: 1.12;
   color: var(--color-dark-blue);
 }
 
@@ -480,10 +477,10 @@ import {
 
 .newsletter__h {
   margin: 0 0 24px;
-  font-size: 36px;
+  font-size: clamp(24px, 6vw, 36px);
   font-weight: 900;
   letter-spacing: -1.8px;
-  line-height: 40px;
+  line-height: 1.1;
   text-transform: uppercase;
 }
 
@@ -504,14 +501,24 @@ import {
 
 .newsletter__form {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   width: 100%;
+  gap: 10px;
+}
+
+@media (min-width: 480px) {
+  .newsletter__form {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0;
+  }
 }
 
 .newsletter__input {
-  flex: 1 1 200px;
+  flex: 1 1 auto;
   min-width: 0;
-  max-width: 320px;
+  width: 100%;
+  max-width: none;
   padding: 22px 24px;
   border: none;
   font-size: 16px;
@@ -522,6 +529,14 @@ import {
 
 .newsletter__input::placeholder {
   color: #737780;
+}
+
+@media (min-width: 480px) {
+  .newsletter__input {
+    flex: 1 1 200px;
+    width: auto;
+    max-width: 320px;
+  }
 }
 
 .newsletter__btn {

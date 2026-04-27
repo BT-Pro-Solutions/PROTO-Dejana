@@ -642,7 +642,7 @@ const nav = [
 
 .pay-card {
   flex: 1;
-  min-width: 260px;
+  min-width: min(100%, 260px);
   max-width: 400px;
   padding: 18px;
   border: 1px solid rgba(0, 30, 64, 0.12);

@@ -51,6 +51,8 @@
   --layout-max-width: 1440px;
   --max-content: var(--layout-max-width);
   --space-page-x: clamp(16px, 4vw, 32px);
+  /** Primary nav: desktop bar vs mobile drawer */
+  --breakpoint-nav-drawer: 1023px;
   --gradient-nav-cta: linear-gradient(170deg, rgb(0, 30, 64) 0%, rgb(0, 51, 102) 100%);
 }
 

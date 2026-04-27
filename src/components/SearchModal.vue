@@ -215,11 +215,11 @@ function onInputEnter() {
 .smodal {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  z-index: 420;
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 48px 16px;
+  padding: max(16px, env(safe-area-inset-top)) var(--space-page-x, 16px) 24px;
 }
 
 .smodal__backdrop {
@@ -275,6 +275,62 @@ function onInputEnter() {
   color: var(--color-dark-blue);
   box-shadow: 0 2px 8px rgba(0, 30, 64, 0.16);
   outline: none;
+}
+
+@media (max-width: 767px) {
+  .smodal {
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+  }
+
+  .smodal__backdrop {
+    background: rgba(0, 20, 40, 0.35);
+  }
+
+  .smodal__panel {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    min-height: 100dvh;
+    min-height: 100vh;
+    margin-top: 0;
+    border-radius: 0;
+    background: #fff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .smodal__close {
+    top: max(10px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    width: 44px;
+    height: 44px;
+    font-size: 26px;
+    background: #fff;
+    box-shadow: none;
+    border-radius: var(--radius-sm);
+    color: var(--color-dark-blue);
+  }
+
+  .smodal__close:hover,
+  .smodal__close:focus-visible {
+    background: var(--color-gray-section);
+    box-shadow: none;
+  }
+
+  .smodal__panel-inner {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: calc(56px + env(safe-area-inset-top)) var(--space-page-x, 16px) max(24px, env(safe-area-inset-bottom));
+  }
 }
 
 .smodal__stack {
@@ -585,6 +641,8 @@ function onInputEnter() {
   white-space: nowrap;
   border: 0;
 }
+
+
 
 @media (max-width: 420px) {
   .smodal__viewed {
