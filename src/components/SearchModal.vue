@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { media } from '../assets/media'
+import { publicUrl } from '../lib/publicUrl'
 import type { DemoProduct } from '../data/products'
 import AddToCartButton from './AddToCartButton.vue'
 
@@ -21,7 +22,7 @@ const buyAgain: DemoProduct[] = [
     sku: 'DJ-EZFLOW-1GAL',
     title: 'Hydraulic Fluid EZ-FLOW 1 Gal',
     price: 25.99,
-    image: '/assets/product-fisher-plow-thumb-3.png',
+    image: publicUrl('assets/product-fisher-plow-thumb-3.png'),
     reviewCount: 0,
     rating: 0,
   },
@@ -31,7 +32,7 @@ const buyAgain: DemoProduct[] = [
     sku: 'DJ-CUT-EDGE-85',
     title: "Cutting Edge Kit 8.5' XV/X2",
     price: 45.99,
-    image: '/assets/product-fisher-plow-thumb-4.png',
+    image: publicUrl('assets/product-fisher-plow-thumb-4.png'),
     reviewCount: 0,
     rating: 0,
   },
@@ -41,13 +42,13 @@ const recentlyViewed = [
   {
     title: 'Hydraulic Unit Extreme V',
     price: 199.99,
-    image: '/assets/product-fisher-plow-thumb-2.png',
+    image: publicUrl('assets/product-fisher-plow-thumb-2.png'),
     slug: 'fisher-hs-compact',
   },
   {
     title: 'Hydraulic Unit Extreme V',
     price: 199.99,
-    image: '/assets/product-fisher-plow-thumb-2.png',
+    image: publicUrl('assets/product-fisher-plow-thumb-2.png'),
     slug: 'fisher-hs-compact',
   },
 ] as const

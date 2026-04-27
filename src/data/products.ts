@@ -1,3 +1,5 @@
+import { publicUrl } from '../lib/publicUrl'
+
 export interface DemoProduct {
   id: string
   /** URL segment for `/product/:slug` */
@@ -52,11 +54,15 @@ export const primaryProduct = {
   shipZip: '46845',
   shipNote: 'Ships FREE to 46845 by Friday May 15th',
   gallery: [
-    { id: 'main', src: '/assets/product-fisher-plow-hero.png', alt: 'Fisher HS compact plow installed on a pickup' },
-    { id: 't1', src: '/assets/product-fisher-plow-hero.png', alt: 'Alternate angle 1' },
-    { id: 't2', src: '/assets/product-fisher-plow-thumb-2.png', alt: 'Alternate angle 2' },
-    { id: 't3', src: '/assets/product-fisher-plow-thumb-3.png', alt: 'Alternate angle 3' },
-    { id: 't4', src: '/assets/product-fisher-plow-thumb-4.png', alt: 'Alternate angle 4' },
+    {
+      id: 'main',
+      src: publicUrl('assets/product-fisher-plow-hero.png'),
+      alt: 'Fisher HS compact plow installed on a pickup',
+    },
+    { id: 't1', src: publicUrl('assets/product-fisher-plow-hero.png'), alt: 'Alternate angle 1' },
+    { id: 't2', src: publicUrl('assets/product-fisher-plow-thumb-2.png'), alt: 'Alternate angle 2' },
+    { id: 't3', src: publicUrl('assets/product-fisher-plow-thumb-3.png'), alt: 'Alternate angle 3' },
+    { id: 't4', src: publicUrl('assets/product-fisher-plow-thumb-4.png'), alt: 'Alternate angle 4' },
   ],
   bladeOptions: [
     { label: "6' 8″ Blade", availability: '25 Available To Buy', tone: 'success', selected: true },
@@ -114,7 +120,7 @@ export const relatedProducts: DemoProduct[] = [
     sku: 'DJ-XTRA-DEEP',
     title: 'XtraDeep Pro Series Van Shelving',
     price: 612.0,
-    image: '/assets/product-fisher-plow-thumb-2.png',
+    image: publicUrl('assets/product-fisher-plow-thumb-2.png'),
     reviewCount: 42,
     rating: 4.5,
   },
@@ -125,7 +131,7 @@ export const relatedProducts: DemoProduct[] = [
     title: 'Fisher HS Compact Snow Plow',
     price: 4299.99,
     compareAtPrice: 4590,
-    image: '/assets/product-fisher-plow-hero.png',
+    image: publicUrl('assets/product-fisher-plow-hero.png'),
     reviewCount: 42,
     rating: 4.5,
   },
@@ -134,7 +140,7 @@ export const relatedProducts: DemoProduct[] = [
     sku: 'CB-REEL-500',
     title: 'CableBoss 500 Hydraulic Reel',
     price: 1849.0,
-    image: '/assets/product-fisher-plow-thumb-3.png',
+    image: publicUrl('assets/product-fisher-plow-thumb-3.png'),
     reviewCount: 18,
     rating: 4.0,
   },
@@ -143,7 +149,7 @@ export const relatedProducts: DemoProduct[] = [
     sku: 'LT-BAR-48',
     title: '48″ LED Flood / Spot Combo Bar',
     price: 289.99,
-    image: '/assets/product-fisher-plow-thumb-4.png',
+    image: publicUrl('assets/product-fisher-plow-thumb-4.png'),
     reviewCount: 63,
     rating: 4.8,
   },
@@ -152,7 +158,7 @@ export const relatedProducts: DemoProduct[] = [
     sku: 'VH-LADDER-PRO',
     title: 'Van Guard Drop-Down Ladder Rack',
     price: 1295.0,
-    image: '/assets/pdp-description-diagram.png',
+    image: publicUrl('assets/pdp-description-diagram.png'),
     reviewCount: 9,
     rating: 4.2,
   },

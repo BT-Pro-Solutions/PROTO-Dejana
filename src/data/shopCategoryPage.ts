@@ -1,10 +1,12 @@
+import { publicUrl } from '../lib/publicUrl'
+
 /** Main Category Page (`95:580`) — copy and asset paths from Figma. */
 export const shopCategoryMedia = {
-  vanInterior: '/assets/shop-category/d98f26f50a2f314bcc883e2456ecefdedb1b5342.png',
-  cablePulling: '/assets/shop-category/2259ea51191d40e377dd2308e875fef50939e1a7.png',
-  snowPlow: '/assets/shop-category/dec22453fbe1e3f30f0c728375ae1e5df06338a5.png',
-  gearboxes: '/assets/shop-category/1c842bc97926589a4575c68aa2def3ca5f0cfc8d.png',
-  lighting: '/assets/shop-category/ecf24defddf90e99f30f2deea92106dd5ffc23a6.png',
+  vanInterior: publicUrl('assets/shop-category/d98f26f50a2f314bcc883e2456ecefdedb1b5342.png'),
+  cablePulling: publicUrl('assets/shop-category/2259ea51191d40e377dd2308e875fef50939e1a7.png'),
+  snowPlow: publicUrl('assets/shop-category/dec22453fbe1e3f30f0c728375ae1e5df06338a5.png'),
+  gearboxes: publicUrl('assets/shop-category/1c842bc97926589a4575c68aa2def3ca5f0cfc8d.png'),
+  lighting: publicUrl('assets/shop-category/ecf24defddf90e99f30f2deea92106dd5ffc23a6.png'),
 } as const
 
 export const shopCategoryFeatured = {

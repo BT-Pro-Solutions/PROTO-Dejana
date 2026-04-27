@@ -15,7 +15,7 @@ const pdpCartProduct = computed<DemoProduct>(() => ({
   sku: primaryProduct.sku,
   title: primaryProduct.title,
   price: primaryProduct.price,
-  image: primaryProduct.gallery[0]?.src ?? '/assets/product-fisher-plow-hero.png',
+  image: primaryProduct.gallery[0]?.src ?? media.productHero,
   reviewCount: primaryProduct.reviewCount,
   rating: primaryProduct.rating,
 }))
