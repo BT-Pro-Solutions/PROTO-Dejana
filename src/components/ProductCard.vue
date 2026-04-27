@@ -5,7 +5,6 @@ import StarRating from './StarRating.vue'
 import AddToCartButton from './AddToCartButton.vue'
 import type { DemoProduct } from '../data/products'
 import { favoritesKey } from '../layout/favorites'
-import { miniCartKey } from '../layout/miniCart'
 
 const props = withDefaults(
   defineProps<{
@@ -31,7 +30,6 @@ const props = withDefaults(
   },
 )
 
-const miniCart = inject(miniCartKey, null)
 const favorites = inject(favoritesKey, null)
 
 const productSlug = computed(() => props.product.slug ?? props.product.id)
@@ -57,12 +55,6 @@ function toggleWish(e: MouseEvent) {
   } else {
     localWishlisted.value = !localWishlisted.value
   }
-}
-
-function onAddToCart(e: MouseEvent) {
-  e.preventDefault()
-  e.stopPropagation()
-  miniCart?.addFromProduct(props.product)
 }
 
 function toggleCompare(e: MouseEvent) {
@@ -117,7 +109,7 @@ function toggleCompare(e: MouseEvent) {
         </p>
       </div>
     </RouterLink>
-    <AddToCartButton v-if="showAddToCart" block class="card__atc" @click="onAddToCart" />
+    <AddToCartButton v-if="showAddToCart" block class="card__atc" :product="product" />
     <button
       v-else-if="showCompare"
       type="button"

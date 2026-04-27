@@ -1,11 +1,23 @@
 <script setup lang="ts">
-import { inject } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { media } from '../assets/media'
+import {
+  demoAccountOrders,
+  orderEligibleForReturn,
+  orderItemCount,
+  orderTotal,
+  type DemoAccountOrder,
+} from '../data/demoAccountOrders'
+import { accountSampleReturnRow, type AccountReturnTableRow } from '../data/sampleAccountReturn'
 import { authKey } from '../layout/auth'
+import { returnsKey } from '../layout/returns'
+import { toastKey } from '../layout/toast'
 
 const router = useRouter()
 const auth = inject(authKey, null)
+const returns = inject(returnsKey, null)
+const toast = inject(toastKey, null)
 
 function signOut() {
   auth?.logout()
@@ -14,6 +26,95 @@ function signOut() {
 
 function money(n: number) {
   return n.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
+}
+
+const orders = demoAccountOrders
+
+const myReturns = computed(() => {
+  const name = auth?.user.value?.displayName?.trim()
+  if (!name || !returns) return []
+  return returns.requests.value.filter((r) => r.submittedByDisplayName === name)
+})
+
+function itemSummaryForOrder(orderId: string): string {
+  const o = demoAccountOrders.find((x) => x.id === orderId)
+  if (!o?.lines.length) return '—'
+  if (o.lines.length === 1) {
+    const line = o.lines[0]!
+    return `${line.title} (qty ${line.qty})`
+  }
+  return `${o.lines.length} line items`
+}
+
+/** Sample completed return plus any requests this session (customer view only). */
+const returnTableRows = computed((): AccountReturnTableRow[] => {
+  if (!auth?.user.value) return []
+  const fromSession: AccountReturnTableRow[] = myReturns.value.map((r) => ({
+    key: r.id,
+    requestId: r.id,
+    orderId: r.orderId,
+    itemSummary: itemSummaryForOrder(r.orderId),
+    reasonLabel: r.reasonLabel,
+    submittedAt: r.submittedAt,
+    status: r.status,
+    reviewNote: r.reviewNote,
+  }))
+  return [accountSampleReturnRow, ...fromSession]
+})
+
+const returnModalOrder = ref<DemoAccountOrder | null>(null)
+const returnReasonId = ref('')
+const returnNotes = ref('')
+
+function canRequestReturn(o: DemoAccountOrder): boolean {
+  if (!orderEligibleForReturn(o)) return false
+  if (o.id === accountSampleReturnRow.orderId) return false
+  const name = auth?.user.value?.displayName?.trim()
+  if (!name || !returns) return false
+  return !returns.hasPendingForOrder(o.id, name)
+}
+
+function openReturnModal(o: DemoAccountOrder) {
+  if (!auth?.user.value) {
+    toast?.push({
+      message: 'Sign in to request a return.',
+      action: { label: 'Log in', to: '/login' },
+    })
+    return
+  }
+  if (!returns?.reasons.length) return
+  returnModalOrder.value = o
+  returnReasonId.value = returns.reasons[0]!.id
+  returnNotes.value = ''
+}
+
+function closeReturnModal() {
+  returnModalOrder.value = null
+}
+
+function submitReturnForm() {
+  const order = returnModalOrder.value
+  if (!order || !returns || !auth?.user.value) return
+  const res = returns.submit({
+    order,
+    reasonId: returnReasonId.value,
+    notes: returnNotes.value,
+    submittedByDisplayName: auth.user.value.displayName,
+  })
+  if (!res.ok) {
+    toast?.push({ message: res.error })
+    return
+  }
+  toast?.push({ message: `Return request ${res.id} was received.` })
+  closeReturnModal()
+}
+
+function formatReturnSubmitted(iso: string) {
+  try {
+    return new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+  } catch {
+    return iso
+  }
 }
 
 const profile = {
@@ -25,12 +126,6 @@ const profile = {
   customerId: 'DJ-104829',
   memberSince: 'March 2022',
 }
-
-const orders = [
-  { id: 'DJ-8F2K91', date: 'Apr 2, 2026', status: 'Shipped', total: 1847.5, items: 3 },
-  { id: 'DJ-7Q3M44', date: 'Mar 18, 2026', status: 'Delivered', total: 329.0, items: 1 },
-  { id: 'DJ-6P1L02', date: 'Feb 4, 2026', status: 'Delivered', total: 5125.75, items: 5 },
-]
 
 const payment = {
   brand: 'Visa',
@@ -58,6 +153,7 @@ const nav = [
   { href: '#overview', label: 'Overview' },
   { href: '#profile', label: 'Profile & password' },
   { href: '#orders', label: 'Order history' },
+  { href: '#returns', label: 'Returns' },
   { href: '#payment', label: 'Payment methods' },
   { href: '#addresses', label: 'Addresses' },
 ]
@@ -154,7 +250,7 @@ const nav = [
               <button type="button" class="btn btn--ghost">Download invoices</button>
             </div>
             <div class="table-wrap">
-              <table class="table">
+              <table class="table table--responsive">
                 <thead>
                   <tr>
                     <th scope="col">Order</th>
@@ -167,22 +263,88 @@ const nav = [
                 </thead>
                 <tbody>
                   <tr v-for="o in orders" :key="o.id">
-                    <td class="table__mono">{{ o.id }}</td>
-                    <td>{{ o.date }}</td>
-                    <td>
+                    <td class="table__mono" data-label="Order">{{ o.id }}</td>
+                    <td data-label="Date">{{ o.date }}</td>
+                    <td data-label="Status">
                       <span
                         class="pill"
                         :class="{ 'pill--ok': o.status === 'Delivered', 'pill--ship': o.status === 'Shipped' }"
                         >{{ o.status }}</span
                       >
                     </td>
-                    <td>{{ o.items }}</td>
-                    <td class="table__num">{{ money(o.total) }}</td>
-                    <td><button type="button" class="linkish">View</button></td>
+                    <td data-label="Items">{{ orderItemCount(o) }}</td>
+                    <td class="table__num" data-label="Total">{{ money(orderTotal(o)) }}</td>
+                    <td class="table__actions" data-label="Actions">
+                      <button type="button" class="linkish">View</button>
+                      <template v-if="orderEligibleForReturn(o)">
+                        <button
+                          v-if="canRequestReturn(o)"
+                          type="button"
+                          class="linkish"
+                          @click="openReturnModal(o)"
+                        >
+                          Request return
+                        </button>
+                        <span v-else class="return-pending">Return pending</span>
+                      </template>
+                    </td>
                   </tr>
                 </tbody>
               </table>
             </div>
+          </section>
+
+          <section id="returns" class="card" tabindex="-1">
+            <div class="card__head">
+              <h2 class="card__h">Returns</h2>
+            </div>
+            <p v-if="!auth?.user" class="card__hint">
+              Sign in to see your returns and submit new requests from eligible orders above.
+            </p>
+            <template v-else>
+              <p class="returns-lead">
+                For a shipped or delivered order, use <strong>Request return</strong> in order history. You will get an
+                email when the status updates.
+              </p>
+              <div class="table-wrap">
+                <table class="table table--responsive">
+                  <thead>
+                    <tr>
+                      <th scope="col">Request</th>
+                      <th scope="col">Order</th>
+                      <th scope="col">Item</th>
+                      <th scope="col">Reason</th>
+                      <th scope="col">Submitted</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="r in returnTableRows" :key="r.key">
+                      <td data-label="Request">
+                        <span class="table__mono">{{ r.requestId }}</span>
+                        <span v-if="r.isSample" class="pill pill--sample">Example</span>
+                      </td>
+                      <td class="table__mono" data-label="Order">{{ r.orderId }}</td>
+                      <td data-label="Item">{{ r.itemSummary }}</td>
+                      <td data-label="Reason">{{ r.reasonLabel }}</td>
+                      <td data-label="Submitted">{{ formatReturnSubmitted(r.submittedAt) }}</td>
+                      <td data-label="Status">
+                        <span
+                          class="pill"
+                          :class="{
+                            'pill--pending': r.status === 'pending',
+                            'pill--ok': r.status === 'approved',
+                            'pill--no': r.status === 'rejected',
+                          }"
+                          >{{ r.status }}</span
+                        >
+                        <p v-if="r.reviewNote" class="review-note">{{ r.reviewNote }}</p>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
           </section>
 
           <section id="payment" class="card" tabindex="-1">
@@ -225,6 +387,39 @@ const nav = [
         </div>
       </div>
     </div>
+
+    <div
+      v-if="returnModalOrder && returns"
+      class="overlay"
+      role="presentation"
+      @click.self="closeReturnModal"
+    >
+      <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="return-dialog-title">
+        <h2 id="return-dialog-title" class="dialog__title">Request a return</h2>
+        <p class="dialog__meta">Order {{ returnModalOrder.id }} · {{ returnModalOrder.date }}</p>
+        <ul class="dialog__lines">
+          <li v-for="line in returnModalOrder.lines" :key="line.sku">
+            {{ line.title }} × {{ line.qty }} — {{ money(line.unitPrice * line.qty) }}
+          </li>
+        </ul>
+        <label class="field">
+          <span class="field__label">Reason</span>
+          <select v-model="returnReasonId" class="field__input">
+            <option v-for="reason in returns.reasons" :key="reason.id" :value="reason.id">
+              {{ reason.label }}
+            </option>
+          </select>
+        </label>
+        <label class="field">
+          <span class="field__label">Notes (optional)</span>
+          <textarea v-model="returnNotes" class="field__input field__textarea" rows="3" />
+        </label>
+        <div class="dialog__actions">
+          <button type="button" class="btn btn--ghost" @click="closeReturnModal">Cancel</button>
+          <button type="button" class="btn btn--primary" @click="submitReturnForm">Submit request</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -236,11 +431,15 @@ const nav = [
 .page__inner {
   max-width: var(--layout-max-width);
   margin: 0 auto;
-  padding: clamp(24px, 4vw, 48px) var(--space-page-x) clamp(40px, 6vw, 64px);
+  padding-top: clamp(24px, 4vw, 48px);
+  padding-bottom: clamp(40px, 6vw, 64px);
+  padding-left: max(var(--space-page-x), env(safe-area-inset-left));
+  padding-right: max(var(--space-page-x), env(safe-area-inset-right));
 }
 
 .crumb {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-size: 12px;
@@ -313,27 +512,82 @@ const nav = [
   background: var(--color-surface-muted);
 }
 
+@media (max-width: 479px) {
+  .page-head__signout {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 .shell {
   display: grid;
   grid-template-columns: 1fr;
-  gap: clamp(24px, 4vw, 40px);
+  gap: clamp(20px, 4vw, 40px);
   align-items: start;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 768px) {
   .shell {
-    grid-template-columns: 220px 1fr;
-    gap: 40px;
+    grid-template-columns: minmax(180px, 220px) 1fr;
+    gap: clamp(24px, 3vw, 40px);
   }
 }
 
 .side {
-  position: sticky;
-  top: 16px;
-  padding: 20px;
+  position: static;
+  padding: 16px;
   background: #fff;
   border: 1px solid var(--color-border);
   border-radius: 12px;
+}
+
+@media (max-width: 767px) {
+  .side {
+    padding: 12px 12px 10px;
+  }
+
+  .side__title {
+    margin-bottom: 10px;
+  }
+
+  .side__list {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 6px;
+    margin: 0 -4px;
+    padding-left: 4px;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .side__link {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 10px 14px;
+    font-size: 13px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface-muted);
+  }
+
+  .side__link:hover {
+    background: #fff;
+  }
+}
+
+@media (min-width: 768px) {
+  .side {
+    position: sticky;
+    top: 16px;
+    padding: 20px;
+  }
+
+  .side__list {
+    flex-direction: column;
+  }
 }
 
 .side__title {
@@ -379,11 +633,11 @@ const nav = [
 }
 
 .card {
-  scroll-margin-top: 24px;
+  scroll-margin-top: clamp(80px, 22vw, 120px);
   background: #fff;
   border: 1px solid var(--color-border);
   border-radius: 12px;
-  padding: clamp(20px, 3vw, 28px);
+  padding: clamp(16px, 3vw, 28px);
 }
 
 .card--hero {
@@ -398,6 +652,20 @@ const nav = [
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 20px;
+}
+
+@media (max-width: 540px) {
+  .card__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .card__head .btn {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
 
 .card__head--tight {
@@ -426,7 +694,8 @@ const nav = [
 
 .hero {
   display: flex;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 16px 20px;
   align-items: flex-start;
 }
 
@@ -517,6 +786,9 @@ const nav = [
 }
 
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   font-family: inherit;
   cursor: pointer;
   border-radius: var(--radius-md);
@@ -550,6 +822,7 @@ const nav = [
 .table-wrap {
   overflow-x: auto;
   margin: 0 -4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .table {
@@ -557,6 +830,80 @@ const nav = [
   min-width: 520px;
   border-collapse: collapse;
   font-size: 14px;
+}
+
+@media (max-width: 699px) {
+  .table--responsive {
+    min-width: 0;
+    display: block;
+  }
+
+  .table--responsive thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .table--responsive tbody {
+    display: block;
+  }
+
+  .table--responsive tbody tr {
+    display: block;
+    margin-bottom: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--color-surface-muted);
+  }
+
+  .table--responsive tbody td {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 14px;
+  }
+
+  .table--responsive tbody td:last-child {
+    border-bottom: none;
+  }
+
+  .table--responsive tbody td::before {
+    content: attr(data-label);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-caption);
+  }
+
+  .table--responsive .table__num {
+    text-align: left;
+  }
+
+  .table--responsive .table__actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .table--responsive .pill--sample {
+    margin-left: 0;
+    margin-top: 2px;
+  }
+
+  .table--responsive .review-note {
+    max-width: none;
+  }
 }
 
 .table th {
@@ -611,6 +958,153 @@ const nav = [
 .pill--ship {
   background: rgba(15, 83, 149, 0.12);
   color: var(--color-light-blue);
+}
+
+.pill--pending {
+  background: rgba(206, 110, 0, 0.15);
+  color: var(--color-warning-text);
+}
+
+.pill--no {
+  background: rgba(176, 0, 32, 0.1);
+  color: #b00020;
+}
+
+.pill--sample {
+  margin-left: 8px;
+  vertical-align: middle;
+  background: rgba(0, 30, 64, 0.08);
+  color: var(--color-caption);
+  font-weight: 700;
+}
+
+.table__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.return-pending {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-warning-text);
+}
+
+.returns-lead {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+}
+
+.review-note {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--color-text-soft);
+  max-width: 280px;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+  background: rgba(0, 30, 64, 0.45);
+}
+
+.dialog {
+  width: min(100%, 480px);
+  max-height: min(90vh, 640px);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+
+@media (max-width: 480px) {
+  .overlay {
+    padding: 12px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    align-items: flex-end;
+  }
+
+  .dialog {
+    width: 100%;
+    max-height: min(92dvh, 640px);
+    border-radius: 12px 12px 0 0;
+    padding: 20px 18px max(20px, env(safe-area-inset-bottom));
+  }
+
+  .dialog__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .dialog__actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.dialog__title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--color-dark-blue);
+}
+
+.dialog__meta {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
+
+.dialog__lines {
+  margin: 0 0 18px;
+  padding: 12px 14px;
+  list-style: none;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--color-text);
+  background: var(--color-surface-muted);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.dialog__lines li + li {
+  margin-top: 6px;
+}
+
+.dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.field__textarea {
+  resize: vertical;
+  min-height: 72px;
+  font-family: inherit;
+}
+
+.btn--primary {
+  padding: 9px 18px;
+  color: #fff;
+  background: var(--color-dark-blue);
+  border: 1px solid var(--color-dark-blue);
+}
+
+.btn--primary:hover {
+  background: var(--color-light-blue);
+  border-color: var(--color-light-blue);
 }
 
 .linkish {

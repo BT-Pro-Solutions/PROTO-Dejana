@@ -119,6 +119,22 @@ const maskedCardNumber = computed(() => {
   return `•••• •••• •••• ${d.slice(-4)}`
 })
 
+const guestCardDigits = computed(() => cardNumber.value.replace(/\D/g, ''))
+
+const detectedGuestCardBrand = computed((): 'visa' | 'mastercard' | 'amex' | 'discover' | null => {
+  const d = guestCardDigits.value
+  if (!d.length) return null
+  if (d[0] === '4') return 'visa'
+  if (d[0] === '3' && (d[1] === '4' || d[1] === '7')) return 'amex'
+  if (d[0] === '5' && d.length >= 2 && '12345'.includes(d[1]!)) return 'mastercard'
+  if (d.length >= 4) {
+    const n = parseInt(d.slice(0, 4), 10)
+    if (!Number.isNaN(n) && n >= 2221 && n <= 2720) return 'mastercard'
+  }
+  if (d[0] === '6') return 'discover'
+  return null
+})
+
 function goToStep(i: number) {
   if (i <= maxReached.value) currentStep.value = i
 }
@@ -315,22 +331,30 @@ function savePaymentModal() {
 }
 
 const guestAddressLocked = ref(false)
-
-const shippingFormValid = computed(() => {
-  return (
-    firstName.value.trim() &&
-    lastName.value.trim() &&
-    city.value.trim() &&
-    address1.value.trim() &&
-    zip.value.trim() &&
-    phone.value.trim()
-  )
-})
+/** After a failed guest submit, show red borders on invalid fields (not all browsers style :user-invalid on untouched inputs). */
+const guestShipShowErrors = ref(false)
 
 function guestAddressSummary() {
   const name = [firstName.value, lastName.value].filter(Boolean).join(' ')
   const line = [city.value, stateCode.value, zip.value].filter(Boolean).join(', ')
   return [name, address1.value, line].filter(Boolean).join(' · ')
+}
+
+function unlockGuestAddress() {
+  guestAddressLocked.value = false
+  guestShipShowErrors.value = false
+}
+
+/** Guest step 1: validate with Constraint Validation API, then lock address. */
+function submitGuestAddressStep(e: Event) {
+  const form = e.currentTarget as HTMLFormElement
+  if (!form.checkValidity()) {
+    guestShipShowErrors.value = true
+    form.reportValidity()
+    return
+  }
+  guestShipShowErrors.value = false
+  guestAddressLocked.value = true
 }
 
 function advanceFromShipping() {
@@ -340,16 +364,10 @@ function advanceFromShipping() {
     return
   }
   if (!guestAddressLocked.value) {
-    if (!shippingFormValid.value) return
-    guestAddressLocked.value = true
     return
   }
   currentStep.value = 1
   maxReached.value = Math.max(maxReached.value, 1)
-}
-
-function unlockGuestAddress() {
-  guestAddressLocked.value = false
 }
 
 function advanceFromPayment() {
@@ -437,7 +455,7 @@ const stepsMeta = [
       </header>
 
       <div class="checkout-sheet">
-      <div class="checkout-sheet__grid">
+      <div class="checkout-sheet__grid" :class="{ 'checkout-sheet__grid--order-done': orderPlaced }">
         <div class="checkout-sheet__main">
           <div class="checkout-sheet__pad checkout-sheet__pad--main">
             <div class="accordion" role="region" aria-label="Checkout steps">
@@ -534,87 +552,163 @@ const stepsMeta = [
 
                 <template v-else>
                   <h2 class="ship-to">Shipping to:</h2>
-                  <div v-show="!guestAddressLocked" class="form-grid">
-                    <label class="field">
-                      <span class="field__l">First name <abbr title="required">*</abbr></span>
-                      <input v-model="firstName" type="text" autocomplete="given-name" required />
-                    </label>
-                    <label class="field">
-                      <span class="field__l">Last name <abbr title="required">*</abbr></span>
-                      <input v-model="lastName" type="text" autocomplete="family-name" required />
-                    </label>
-                    <label class="field">
-                      <span class="field__l">Company</span>
-                      <input v-model="company" type="text" autocomplete="organization" />
-                    </label>
-                    <label class="field">
-                      <span class="field__l">Country <abbr title="required">*</abbr></span>
-                      <select v-model="country" autocomplete="country">
-                        <option value="US">United States</option>
-                        <option value="CA">Canada</option>
-                      </select>
-                    </label>
-                    <label class="field">
-                      <span class="field__l">City <abbr title="required">*</abbr></span>
-                      <input v-model="city" type="text" autocomplete="address-level2" required />
-                    </label>
-                    <label class="field">
-                      <span class="field__l">State <abbr title="required">*</abbr></span>
-                      <select v-model="stateCode" autocomplete="address-level1">
-                        <option v-for="st in usStates" :key="st.abbr" :value="st.abbr">{{ st.abbr }}</option>
-                      </select>
-                    </label>
-                    <label class="field field--full">
-                      <span class="field__l">Address line 1 <abbr title="required">*</abbr></span>
-                      <input v-model="address1" type="text" autocomplete="address-line1" required />
-                    </label>
-                    <label class="field field--full">
-                      <span class="field__l">Address line 2</span>
-                      <input v-model="address2" type="text" autocomplete="address-line2" />
-                    </label>
-                    <label class="field">
-                      <span class="field__l">ZIP code <abbr title="required">*</abbr></span>
-                      <input v-model="zip" type="text" autocomplete="postal-code" inputmode="numeric" required />
-                    </label>
-                    <label class="field">
-                      <span class="field__l">Phone <abbr title="required">*</abbr></span>
-                      <input v-model="phone" type="tel" autocomplete="tel" required />
-                    </label>
-                  </div>
-                  <div v-show="guestAddressLocked" class="guest-ship-review">
-                    <p class="guest-ship-review__line">{{ guestAddressSummary() }}</p>
-                    <button type="button" class="btn-text" @click="unlockGuestAddress">Edit address</button>
-                    <h2 class="ship-to ship-to--spaced">Shipping via:</h2>
-                    <div class="pick-list" role="radiogroup" aria-label="Shipping method">
-                      <label
-                        v-for="m in shipMethodOptions"
-                        :key="m.id"
-                        class="pick-card pick-card--ship"
-                        :class="{ 'pick-card--selected': selectedShipMethod === m.id }"
-                      >
+                  <form
+                    v-if="!guestAddressLocked"
+                    class="guest-ship-form"
+                    :class="{ 'guest-ship-form--show-errors': guestShipShowErrors }"
+                    @submit.prevent="submitGuestAddressStep"
+                  >
+                    <div class="form-grid">
+                      <label class="field">
+                        <span class="field__l">First name <abbr title="required">*</abbr></span>
                         <input
-                          v-model="selectedShipMethod"
-                          class="pick-card__radio"
-                          type="radio"
-                          name="guest-ship-method"
-                          :value="m.id"
+                          v-model="firstName"
+                          name="given-name"
+                          type="text"
+                          autocomplete="given-name"
+                          required
                         />
-                        <span class="pick-card__body">
-                          <span class="pick-card__title">{{ m.label }}</span>
-                          <span v-if="m.amount === 0" class="pick-card__price pick-card__price--free">FREE</span>
-                          <span v-else class="pick-card__price pick-card__price--paid">{{ money(m.amount) }}</span>
-                        </span>
+                      </label>
+                      <label class="field">
+                        <span class="field__l">Last name <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="lastName"
+                          name="family-name"
+                          type="text"
+                          autocomplete="family-name"
+                          required
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">Company</span>
+                        <input v-model="company" name="company" type="text" autocomplete="organization" />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">Country <abbr title="required">*</abbr></span>
+                        <select v-model="country" name="country" autocomplete="country" required>
+                          <option value="US">United States</option>
+                          <option value="CA">Canada</option>
+                        </select>
+                      </label>
+                      <label class="field">
+                        <span class="field__l">City <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="city"
+                          name="city"
+                          type="text"
+                          autocomplete="address-level2"
+                          required
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">State <abbr title="required">*</abbr></span>
+                        <select v-model="stateCode" name="state" autocomplete="address-level1" required>
+                          <option v-for="st in usStates" :key="st.abbr" :value="st.abbr">{{ st.abbr }}</option>
+                        </select>
+                      </label>
+                      <label class="field field--full">
+                        <span class="field__l">Address line 1 <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="address1"
+                          name="address-line1"
+                          type="text"
+                          autocomplete="address-line1"
+                          required
+                        />
+                      </label>
+                      <label class="field field--full">
+                        <span class="field__l">Address line 2</span>
+                        <input
+                          v-model="address2"
+                          name="address-line2"
+                          type="text"
+                          autocomplete="address-line2"
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">ZIP code <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="zip"
+                          name="postal-code"
+                          type="text"
+                          autocomplete="postal-code"
+                          inputmode="numeric"
+                          required
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">Phone <abbr title="required">*</abbr></span>
+                        <input v-model="phone" name="tel" type="tel" autocomplete="tel" required />
                       </label>
                     </div>
-                  </div>
-                  <button type="button" class="btn-primary btn-primary--ship-cta" @click="advanceFromShipping">
-                    {{ guestAddressLocked ? 'Save & continue' : 'Continue to shipping options' }}
-                  </button>
+                    <button type="submit" class="btn-primary btn-primary--ship-cta">
+                      Continue to shipping options
+                    </button>
+                  </form>
+                  <template v-else>
+                    <div class="guest-ship-review">
+                      <p class="guest-ship-review__line">{{ guestAddressSummary() }}</p>
+                      <button type="button" class="btn-text" @click="unlockGuestAddress">Edit address</button>
+                      <h2 class="ship-to ship-to--spaced">Shipping via:</h2>
+                      <div class="pick-list" role="radiogroup" aria-label="Shipping method">
+                        <label
+                          v-for="m in shipMethodOptions"
+                          :key="m.id"
+                          class="pick-card pick-card--ship"
+                          :class="{ 'pick-card--selected': selectedShipMethod === m.id }"
+                        >
+                          <input
+                            v-model="selectedShipMethod"
+                            class="pick-card__radio"
+                            type="radio"
+                            name="guest-ship-method"
+                            :value="m.id"
+                          />
+                          <span class="pick-card__body">
+                            <span class="pick-card__title">{{ m.label }}</span>
+                            <span v-if="m.amount === 0" class="pick-card__price pick-card__price--free">FREE</span>
+                            <span v-else class="pick-card__price pick-card__price--paid">{{ money(m.amount) }}</span>
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                    <button type="button" class="btn-primary btn-primary--ship-cta" @click="advanceFromShipping">
+                      Save &amp; continue
+                    </button>
+                  </template>
                 </template>
               </div>
 
               <div v-if="i === 1 && currentStep === 1" class="panel-body panel-body--pay">
-                <p class="panel-lead">All transactions are secure and encrypted.</p>
+                <p class="panel-lead panel-lead--secure">
+                  <svg
+                    class="panel-lead__lock"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M7 11V8a5 5 0 0 1 10 0v3"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                      stroke-linecap="round"
+                    />
+                    <rect
+                      x="5"
+                      y="11"
+                      width="14"
+                      height="11"
+                      rx="2"
+                      stroke="currentColor"
+                      stroke-width="1.75"
+                    />
+                    <circle cx="12" cy="16" r="1.25" fill="currentColor" />
+                  </svg>
+                  <span>All transactions are secure and encrypted.</span>
+                </p>
 
                 <template v-if="isLoggedIn">
                   <p class="pay-pick-label">Payment method</p>
@@ -657,36 +751,124 @@ const stepsMeta = [
                   <button type="button" class="btn-text" @click="openPaymentModal()">+ Add another card</button>
                 </template>
 
-                <div v-else class="cc-scene">
-                  <div class="cc-card" role="group" aria-labelledby="cc-card-label">
-                    <span id="cc-card-label" class="sr-only">Card payment</span>
-                    <div class="cc-card__top">
-                      <span class="cc-card__chip" aria-hidden="true" />
-                      <span class="cc-card__brand" aria-hidden="true">CARD</span>
-                    </div>
-                    <label class="cc-in cc-in--number">
-                      <span class="cc-in__l">Card number</span>
-                      <input
-                        v-model="cardNumber"
-                        type="text"
-                        inputmode="numeric"
-                        autocomplete="cc-number"
-                        placeholder="4242 4242 4242 4242"
-                      />
+                <div v-else class="guest-pay">
+                  <div class="guest-pay-card" role="group" aria-label="Card payment">
+                    <label class="guest-pay-field" for="guest-cc-number">
+                      <span class="guest-pay-field__l">Card number</span>
+                      <div class="guest-pay-inputwrap guest-pay-inputwrap--number">
+                        <div
+                          class="guest-pay-cardlogo"
+                          :class="{ 'guest-pay-cardlogo--active': detectedGuestCardBrand }"
+                          aria-hidden="true"
+                        >
+                          <svg
+                            v-if="detectedGuestCardBrand === 'visa'"
+                            class="guest-pay-cardlogo__svg guest-pay-cardlogo__svg--visa"
+                            viewBox="0 0 64 20"
+                            width="36"
+                            height="12"
+                            aria-hidden="true"
+                          >
+                            <text
+                              x="1"
+                              y="14"
+                              fill="#1a1f71"
+                              font-family="system-ui, -apple-system, sans-serif"
+                              font-size="12"
+                              font-weight="800"
+                              letter-spacing="0.06em"
+                            >
+                              VISA
+                            </text>
+                          </svg>
+                          <svg
+                            v-else-if="detectedGuestCardBrand === 'mastercard'"
+                            class="guest-pay-cardlogo__svg"
+                            viewBox="0 0 40 24"
+                            width="28"
+                            height="17"
+                            aria-hidden="true"
+                          >
+                            <circle cx="15" cy="12" r="10" fill="#EB001B" />
+                            <circle cx="25" cy="12" r="10" fill="#F79E1B" fill-opacity="0.95" />
+                          </svg>
+                          <svg
+                            v-else-if="detectedGuestCardBrand === 'amex'"
+                            class="guest-pay-cardlogo__svg"
+                            viewBox="0 0 56 20"
+                            width="36"
+                            height="13"
+                            aria-hidden="true"
+                          >
+                            <rect width="56" height="20" rx="3" fill="#016fd0" />
+                            <text
+                              x="28"
+                              y="13"
+                              fill="#fff"
+                              font-family="system-ui, -apple-system, sans-serif"
+                              font-size="8"
+                              font-weight="800"
+                              letter-spacing="0.04em"
+                              text-anchor="middle"
+                            >
+                              AMEX
+                            </text>
+                          </svg>
+                          <svg
+                            v-else-if="detectedGuestCardBrand === 'discover'"
+                            class="guest-pay-cardlogo__svg"
+                            viewBox="0 0 56 20"
+                            width="36"
+                            height="13"
+                            aria-hidden="true"
+                          >
+                            <rect width="56" height="20" rx="3" fill="#fff" stroke="#cbd5e1" stroke-width="1" />
+                            <circle cx="28" cy="10" r="4.5" fill="#f47216" />
+                          </svg>
+                        </div>
+                        <input
+                          id="guest-cc-number"
+                          v-model="cardNumber"
+                          class="guest-pay-input guest-pay-input--number"
+                          type="text"
+                          inputmode="numeric"
+                          autocomplete="cc-number"
+                          placeholder="4242 4242 4242 4242"
+                        />
+                      </div>
                     </label>
-                    <div class="cc-card__row">
-                      <label class="cc-in cc-in--grow">
-                        <span class="cc-in__l">Name on card</span>
-                        <input v-model="cardName" type="text" autocomplete="cc-name" placeholder="As shown on card" />
+                    <div class="guest-pay-row">
+                      <label class="guest-pay-field guest-pay-field--grow">
+                        <span class="guest-pay-field__l">Name on card</span>
+                        <input
+                          v-model="cardName"
+                          class="guest-pay-input"
+                          type="text"
+                          autocomplete="cc-name"
+                          placeholder="As shown on card"
+                        />
                       </label>
-                      <label class="cc-in cc-in--narrow">
-                        <span class="cc-in__l">Expires</span>
-                        <input v-model="cardExp" type="text" autocomplete="cc-exp" placeholder="MM / YY" />
+                      <label class="guest-pay-field guest-pay-field--exp">
+                        <span class="guest-pay-field__l">Expires</span>
+                        <input
+                          v-model="cardExp"
+                          class="guest-pay-input"
+                          type="text"
+                          autocomplete="cc-exp"
+                          placeholder="MM / YY"
+                        />
                       </label>
                     </div>
-                    <label class="cc-in cc-in--cvc">
-                      <span class="cc-in__l">Security code</span>
-                      <input v-model="cardCvc" type="text" autocomplete="cc-csc" inputmode="numeric" placeholder="CVC" />
+                    <label class="guest-pay-field guest-pay-field--cvc">
+                      <span class="guest-pay-field__l">Security code</span>
+                      <input
+                        v-model="cardCvc"
+                        class="guest-pay-input"
+                        type="text"
+                        autocomplete="cc-csc"
+                        inputmode="numeric"
+                        placeholder="CVC"
+                      />
                     </label>
                   </div>
                 </div>
@@ -765,16 +947,41 @@ const stepsMeta = [
                   </div>
                 </template>
 
-                <div v-else class="done-card">
-                  <div class="done-card__icon" aria-hidden="true">
-                    <img :src="media.icons.inStockCheck" width="40" height="40" alt="" />
+                <div v-else class="done-card done-card--celebrate">
+                  <div class="done-card__iconwrap" aria-hidden="true">
+                    <svg class="done-card__check" viewBox="0 0 88 88" width="88" height="88" fill="none">
+                      <circle cx="44" cy="44" r="40" fill="url(#done-grad)" opacity="0.95" />
+                      <circle cx="44" cy="44" r="40" stroke="#fff" stroke-opacity="0.35" stroke-width="3" />
+                      <path
+                        d="M28 46l12 12 24-28"
+                        stroke="#fff"
+                        stroke-width="6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                      <defs>
+                        <linearGradient id="done-grad" x1="12" y1="8" x2="76" y2="80" gradientUnits="userSpaceOnUse">
+                          <stop stop-color="#00c853" />
+                          <stop offset="1" stop-color="#00a721" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
                   </div>
-                  <h2 class="done-card__h">Thank you — demo order placed</h2>
+                  <p class="done-card__eyebrow">You’re all set</p>
+                  <h2 class="done-card__h">Thank you — your order is in!</h2>
                   <p class="done-card__p">
-                    Order <strong>{{ demoOrderId }}</strong> is for demonstration only. No payment was processed.
+                    Order
+                    <RouterLink class="done-card__order" :to="{ name: 'account', hash: '#orders' }">{{
+                      demoOrderId
+                    }}</RouterLink>
+                    is saved for this demo. Nothing was charged.
                   </p>
-                  <div class="panel-actions panel-actions--center">
+                  <p class="done-card__hint">Open your account to see it in order history anytime.</p>
+                  <div class="panel-actions panel-actions--center done-card__actions">
                     <RouterLink to="/" class="btn-primary btn-primary--link">Continue shopping</RouterLink>
+                    <RouterLink :to="{ name: 'account', hash: '#orders' }" class="btn-secondary btn-secondary--link"
+                      >View order history</RouterLink
+                    >
                   </div>
                 </div>
               </div>
@@ -784,7 +991,7 @@ const stepsMeta = [
           </div>
         </div>
 
-        <aside class="checkout-sheet__aside summary" aria-label="Order summary">
+        <aside v-if="!orderPlaced" class="checkout-sheet__aside summary" aria-label="Order summary">
           <div class="checkout-sheet__pad checkout-sheet__pad--aside">
             <h2 class="summary__h">Order summary</h2>
             <ul class="summary__lines">
@@ -1025,6 +1232,11 @@ const stepsMeta = [
 @media (min-width: 960px) {
   .checkout-sheet__grid {
     grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  }
+
+  .checkout-sheet__grid--order-done {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: var(--layout-max-width);
   }
 }
 
@@ -1300,6 +1512,19 @@ const stepsMeta = [
   color: var(--color-text-muted);
 }
 
+.panel-lead--secure {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.45;
+}
+
+.panel-lead__lock {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-success);
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1352,117 +1577,144 @@ const stepsMeta = [
   border-color: var(--color-dark-blue);
 }
 
-.cc-scene {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 28px;
+.guest-ship-form--show-errors .field input:invalid,
+.guest-ship-form--show-errors .field select:invalid {
+  border-color: #c41e1e;
+  box-shadow: 0 0 0 3px rgba(196, 30, 30, 0.14);
 }
 
-.cc-card {
+.guest-ship-form .field input:user-invalid,
+.guest-ship-form .field select:user-invalid {
+  border-color: #c41e1e;
+  box-shadow: 0 0 0 3px rgba(196, 30, 30, 0.14);
+}
+
+.guest-pay {
   width: 100%;
-  max-width: 400px;
-  aspect-ratio: 1.586;
-  padding: clamp(16px, 4vw, 22px) clamp(18px, 4vw, 24px);
-  border-radius: 14px;
-  background: linear-gradient(145deg, #0a2a52 0%, #001e40 48%, #00152e 100%);
-  color: #fff;
+  max-width: 520px;
+  margin: 0 0 28px;
+}
+
+.guest-pay-card {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 18px;
+  padding: 20px 20px 28px;
+  border: 1px solid #d8dde6;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 0 rgba(0, 30, 64, 0.04);
 }
 
-.cc-card__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.cc-card__chip {
-  width: 42px;
-  height: 32px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #d4af37 0%, #b8860b 50%, #8b6914 100%);
-  box-shadow: none;
-}
-
-.cc-card__brand {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.2em;
-  opacity: 0.55;
-}
-
-.cc-in {
+.guest-pay-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   min-width: 0;
 }
 
-.cc-in__l {
-  font-size: 10px;
+.guest-pay-field__l {
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.75;
+  color: var(--color-text-muted);
 }
 
-.cc-in input {
+.guest-pay-inputwrap {
+  position: relative;
+  display: block;
+}
+
+.guest-pay-inputwrap--number .guest-pay-cardlogo {
+  position: absolute;
+  z-index: 1;
+  left: 1px;
+  top: 1px;
+  bottom: 1px;
+  width: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px 0 0 7px;
+  background: #f1f4f9;
+  border-right: 1px solid #e2e8f0;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.guest-pay-inputwrap--number .guest-pay-cardlogo--active {
+  background: #e8eef6;
+  border-right-color: #cbd5e1;
+}
+
+.guest-pay-cardlogo__svg {
+  display: block;
+}
+
+.guest-pay-cardlogo__svg--visa text {
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.guest-pay-input {
   width: 100%;
-  padding: 8px 10px;
-  border: none;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  font-size: clamp(14px, 2.8vw, 17px);
+  padding: 11px 12px;
+  border: 1px solid #d8dde6;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  background: #fff;
+  color: var(--color-text);
+  box-sizing: border-box;
+}
+
+.guest-pay-input::placeholder {
+  color: var(--color-input-placeholder, #6b7280);
+}
+
+.guest-pay-input:focus {
+  outline: none;
+  border-color: var(--color-dark-blue);
+  box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.12);
+}
+
+.guest-pay-inputwrap--number .guest-pay-input--number {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  padding-left: 58px;
   font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 16px;
   letter-spacing: 0.04em;
 }
 
-.cc-in input::placeholder {
-  color: rgba(255, 255, 255, 0.35);
-}
-
-.cc-in input:focus {
-  outline: 2px solid rgba(255, 255, 255, 0.45);
-  outline-offset: 1px;
-}
-
-.cc-in--number input {
-  font-size: clamp(15px, 3.2vw, 18px);
-  letter-spacing: 0.08em;
-}
-
-.cc-card__row {
+.guest-pay-row {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 16px 20px;
   align-items: flex-end;
 }
 
-.cc-in--grow {
+.guest-pay-field--grow {
   flex: 1;
-  min-width: 0;
+  min-width: min(100%, 200px);
 }
 
-.cc-in--narrow {
-  width: 38%;
+.guest-pay-field--exp {
+  width: 140px;
   flex-shrink: 0;
 }
 
-.cc-in--narrow input {
-  font-family: inherit;
-  letter-spacing: 0.02em;
+.guest-pay-field--cvc {
+  max-width: 160px;
 }
 
-.cc-in--cvc {
-  align-self: flex-end;
-  max-width: 120px;
-}
+@media (max-width: 480px) {
+  .guest-pay-field--exp {
+    width: 100%;
+  }
 
-.cc-in--cvc input {
-  font-family: inherit;
+  .guest-pay-field--cvc {
+    max-width: none;
+  }
 }
 
 .btn-primary {
@@ -1642,25 +1894,132 @@ const stepsMeta = [
   padding: 16px 0 24px;
 }
 
-.done-card__icon {
-  margin-bottom: 12px;
+.done-card--celebrate {
+  position: relative;
+  max-width: min(100%, 640px);
 }
 
-.done-card__icon img {
-  display: inline-block;
+.done-card--celebrate::before {
+  content: '';
+  position: absolute;
+  inset: -30% -20% auto;
+  height: 70%;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0, 200, 83, 0.18), transparent 65%);
+  pointer-events: none;
+}
+
+.done-card__iconwrap {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+  animation: done-card-pop 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.done-card__check {
+  display: block;
+  filter: drop-shadow(0 10px 20px rgba(0, 120, 40, 0.25));
+}
+
+.done-card__eyebrow {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-success);
 }
 
 .done-card__h {
-  margin: 0 0 10px;
-  font-size: 22px;
-  color: var(--color-dark-blue);
+  position: relative;
+  z-index: 1;
+  margin: 0 0 14px;
+  font-size: clamp(26px, 4vw, 34px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  background: var(--color-dark-blue);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .done-card__p {
-  margin: 0 0 24px;
+  position: relative;
+  z-index: 1;
+  margin: 0 0 10px;
+  font-size: 16px;
+  color: var(--color-text);
+  line-height: 1.55;
+}
+
+.done-card__order {
+  display: inline-block;
+  margin: 0 0.12em;
+  padding: 2px 8px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-dark-blue);
+  text-decoration: none;
+  border-radius: 6px;
+  background: rgba(15, 83, 149, 0.1);
+  border: 1px solid rgba(15, 83, 149, 0.22);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+
+.done-card__order:hover {
+  background: rgba(15, 83, 149, 0.16);
+  border-color: var(--color-light-blue);
+  transform: translateY(-1px);
+}
+
+.done-card__hint {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 28px;
   font-size: 14px;
   color: var(--color-text-muted);
-  line-height: 1.5;
+  line-height: 1.45;
+}
+
+.done-card__actions {
+  position: relative;
+  z-index: 1;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.btn-secondary--link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 24px;
+  border-radius: 8px;
+  border: 2px solid rgba(0, 30, 64, 0.18);
+  background: #fff;
+  color: var(--color-dark-blue);
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.btn-secondary--link:hover {
+  border-color: var(--color-light-blue);
+  background: var(--color-surface-muted);
 }
 
 .summary {

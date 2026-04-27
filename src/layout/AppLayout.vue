@@ -14,7 +14,10 @@ import * as demoAuth from '../session/demoAuth'
 import { favoritesKey } from './favorites'
 import { searchModalKey } from './searchModal'
 import { miniCartKey } from './miniCart'
+import { returnsKey } from './returns'
 import { toastKey, type ToastItem } from './toast'
+import { returnReasons } from '../data/returnReasons'
+import * as demoReturns from '../session/demoReturns'
 
 const FAVORITES_STORAGE_KEY = 'dejana-demo-favorite-ids'
 function readFavoriteIds(): string[] {
@@ -100,7 +103,9 @@ provide(favoritesKey, {
   isFavorite,
 })
 
-function addFromProduct(product: DemoProduct) {
+let miniCartOpenTimer: ReturnType<typeof setTimeout> | null = null
+
+function addFromProduct(product: DemoProduct, options?: { openDelayMs?: number }) {
   const sku = product.sku
   const existing = cartLinesState.value.find((l) => l.sku === sku)
   if (existing) {
@@ -116,7 +121,20 @@ function addFromProduct(product: DemoProduct) {
       stockStatus: 'in-stock',
     })
   }
-  miniCartOpen.value = true
+
+  const delay = options?.openDelayMs ?? 0
+  if (miniCartOpenTimer) {
+    clearTimeout(miniCartOpenTimer)
+    miniCartOpenTimer = null
+  }
+  if (delay > 0) {
+    miniCartOpenTimer = window.setTimeout(() => {
+      miniCartOpen.value = true
+      miniCartOpenTimer = null
+    }, delay)
+  } else {
+    miniCartOpen.value = true
+  }
 }
 
 provide(searchModalKey, {
@@ -138,6 +156,13 @@ provide(miniCartKey, {
   isOpen: miniCartOpen,
   lines: cartLinesState,
   addFromProduct,
+})
+
+provide(returnsKey, {
+  requests: demoReturns.returnRequests,
+  reasons: returnReasons,
+  submit: demoReturns.submitReturnRequest,
+  hasPendingForOrder: demoReturns.hasPendingReturnForOrder,
 })
 
 const activeNav = computed(() => {

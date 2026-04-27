@@ -3,7 +3,7 @@ import { computed, inject, ref } from 'vue'
 import StarRating from './StarRating.vue'
 import AddToCartButton from './AddToCartButton.vue'
 import { media } from '../assets/media'
-import type { BladeOption } from '../data/products'
+import type { BladeOption, DemoProduct } from '../data/products'
 import { favoritesKey } from '../layout/favorites'
 
 const props = defineProps<{
@@ -17,6 +17,7 @@ const props = defineProps<{
   rating: number
   bladeOptions: BladeOption[]
   shipNote: string
+  cartProduct: DemoProduct
 }>()
 
 const favorites = inject(favoritesKey, null)
@@ -73,7 +74,7 @@ const shipNoteHtml = computed(() => {
         <span class="qty__val">{{ qty }}</span>
         <button type="button" class="qty__btn" aria-label="Increase quantity" @click="bump(1)">+</button>
       </div>
-      <AddToCartButton block class="actions__atc" />
+      <AddToCartButton block class="actions__atc" :product="cartProduct" />
     </div>
 
     <button

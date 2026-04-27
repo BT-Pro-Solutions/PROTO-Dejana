@@ -51,7 +51,7 @@ const productSpecs = computed(() =>
             </template>
           </dl>
           <div class="btn-stack">
-            <AddToCartButton block />
+            <AddToCartButton block :product="block.product" />
             <button
               type="button"
               class="btn-outline"
@@ -88,7 +88,7 @@ const productSpecs = computed(() =>
               <td class="table__attr table__attr--muted" aria-hidden="true"></td>
               <td v-for="p in compareProducts" :key="'atc-' + p.id" class="table__atc-cell">
                 <div class="btn-stack">
-                  <AddToCartButton block />
+                  <AddToCartButton block :product="p" />
                   <button type="button" class="btn-outline" :aria-label="'Remove ' + p.title + ' from compare'">
                     Remove from compare
                   </button>

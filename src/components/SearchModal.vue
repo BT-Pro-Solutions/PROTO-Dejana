@@ -2,6 +2,7 @@
 import { computed, nextTick, ref, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { media } from '../assets/media'
+import type { DemoProduct } from '../data/products'
 import AddToCartButton from './AddToCartButton.vue'
 
 const props = defineProps<{ open: boolean }>()
@@ -13,20 +14,28 @@ const query = ref('')
 
 const recentSearches = ['Salt Spreader', 'Hydraulic Pump', 'Flange Bearing'] as const
 
-const buyAgain = [
+const buyAgain: DemoProduct[] = [
   {
+    id: 'buyagain-1',
+    slug: 'fisher-hs-compact',
+    sku: 'DJ-EZFLOW-1GAL',
     title: 'Hydraulic Fluid EZ-FLOW 1 Gal',
     price: 25.99,
     image: '/assets/product-fisher-plow-thumb-3.png',
-    slug: 'fisher-hs-compact',
+    reviewCount: 0,
+    rating: 0,
   },
   {
+    id: 'buyagain-2',
+    slug: 'l2',
+    sku: 'DJ-CUT-EDGE-85',
     title: "Cutting Edge Kit 8.5' XV/X2",
     price: 45.99,
     image: '/assets/product-fisher-plow-thumb-4.png',
-    slug: 'l2',
+    reviewCount: 0,
+    rating: 0,
   },
-] as const
+]
 
 const recentlyViewed = [
   {
@@ -167,7 +176,7 @@ function onInputEnter() {
           <div class="smodal__card">
             <h3 class="smodal__h">Buy again</h3>
             <ul class="smodal__buy-list">
-              <li v-for="p in buyAgain" :key="p.title">
+              <li v-for="p in buyAgain" :key="p.id">
                 <div class="smodal__buy-row">
                   <RouterLink
                     :to="{ name: 'product', params: { slug: p.slug } }"
@@ -179,7 +188,12 @@ function onInputEnter() {
                     <span class="smodal__buy-price">${{ p.price.toFixed(2) }}</span>
                   </RouterLink>
                   <span class="smodal__ac">
-                    <AddToCartButton variant="icon" label="Add to cart" />
+                    <AddToCartButton
+                      variant="icon"
+                      label="Add to cart"
+                      :product="p"
+                      @added="emit('close')"
+                    />
                   </span>
                 </div>
               </li>

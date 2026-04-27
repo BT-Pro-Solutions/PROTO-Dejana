@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import ProductGallery from '../components/ProductGallery.vue'
 import ProductInfoPanel from '../components/ProductInfoPanel.vue'
@@ -6,6 +7,18 @@ import PdpTabsSection from '../components/PdpTabsSection.vue'
 import CustomersAlsoBought from '../components/CustomersAlsoBought.vue'
 import { media } from '../assets/media'
 import { primaryProduct, relatedProducts } from '../data/products'
+import type { DemoProduct } from '../data/products'
+
+const pdpCartProduct = computed<DemoProduct>(() => ({
+  id: primaryProduct.id,
+  slug: 'fisher-hs-compact',
+  sku: primaryProduct.sku,
+  title: primaryProduct.title,
+  price: primaryProduct.price,
+  image: primaryProduct.gallery[0]?.src ?? '/assets/product-fisher-plow-hero.png',
+  reviewCount: primaryProduct.reviewCount,
+  rating: primaryProduct.rating,
+}))
 </script>
 
 <template>
@@ -44,6 +57,7 @@ import { primaryProduct, relatedProducts } from '../data/products'
             :rating="primaryProduct.rating"
             :blade-options="primaryProduct.bladeOptions"
             :ship-note="primaryProduct.shipNote"
+            :cart-product="pdpCartProduct"
           />
         </aside>
       </div>
