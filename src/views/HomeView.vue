@@ -85,14 +85,6 @@ const categories = [
     </section>
 
     <section class="section section--service">
-      <div class="service__bg-deco" aria-hidden="true">
-        <svg class="service__mega-env" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path
-            fill="currentColor"
-            d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 3.2V8l-8 5.3L4 8V7.2L12 12 20 7.2z"
-          />
-        </svg>
-      </div>
       <div class="service">
         <div class="service__visual">
           <div class="service__bubble-outlines" aria-hidden="true">
@@ -457,7 +449,8 @@ const categories = [
   align-items: center;
   justify-content: space-between;
   gap: clamp(24px, 4vw, 48px);
-  padding: clamp(28px, 5vw, 56px) clamp(20px, 4vw, 60px) clamp(36px, 6vw, 72px);
+  padding: 0 30px;
+  max-height: 1400px;
 }
 
 .service__visual {
@@ -511,28 +504,23 @@ const categories = [
 .service__photo-card {
   position: relative;
   z-index: 1;
-  border-radius: 28px;
-  background: #0c2d52;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
-  padding: 14px 14px 14px;
   overflow: hidden;
 }
 
 .service__photo-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 5;
+  aspect-ratio: 1/1;
   max-height: min(500px, 68vh);
   border-radius: 18px;
   overflow: hidden;
-  background: #071f3a;
 }
 
 .service__photo {
-  width: 100%;
-  height: 100%;
+  width: auto;
+  height: 150%;
   object-fit: cover;
-  object-position: center 12%;
+  object-position: top 20%;
   display: block;
 }
 

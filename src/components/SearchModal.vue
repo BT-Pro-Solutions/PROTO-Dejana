@@ -92,113 +92,119 @@ function onInputEnter() {
         aria-labelledby="smodal-title"
         tabindex="-1"
       >
-        <h2 id="smodal-title" class="visually-hidden">Search</h2>
         <button type="button" class="smodal__close" aria-label="Close search" @click="emit('close')">
           ×
         </button>
+        <div class="smodal__panel-inner">
+          <h2 id="smodal-title" class="visually-hidden">Search</h2>
 
-        <div class="smodal__stack">
-          <div class="smodal__card smodal__card--search">
-            <label class="smodal__search-label">
-              <span class="visually-hidden">Search products</span>
-              <div class="smodal__input-shell">
-                <input
-                  ref="inputRef"
-                  v-model="query"
-                  type="search"
-                  class="smodal__input"
-                  placeholder="Search products..."
-                  autocomplete="off"
-                  @keydown.enter.prevent="onInputEnter"
-                />
-                <span class="smodal__input-icon" aria-hidden="true">
-                  <img :src="media.icons.search" width="18" height="18" alt="" />
-                </span>
+          <div class="smodal__stack">
+            <div class="smodal__card smodal__card--search">
+              <div class="smodal__search-body">
+                <div class="smodal__search-row-wrap">
+                  <div class="smodal__search-row">
+                    <label class="smodal__search-label">
+                      <span class="visually-hidden">Search products</span>
+                      <div class="smodal__input-shell">
+                        <input
+                          ref="inputRef"
+                          v-model="query"
+                          type="search"
+                          class="smodal__input"
+                          placeholder="Search products..."
+                          autocomplete="off"
+                          @keydown.enter.prevent="onInputEnter"
+                        />
+                        <span class="smodal__input-icon" aria-hidden="true">
+                          <img :src="media.icons.search" width="18" height="18" alt="" />
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div v-if="showLiveSuggestions" class="smodal__attached-suggest">
+                  <h3 class="smodal__h smodal__h--attached">Suggestions</h3>
+                  <ul class="smodal__suggest-list" role="listbox" aria-label="Search suggestions">
+                    <li v-for="(s, i) in liveSuggestions" :key="i">
+                      <button type="button" class="smodal__suggest" @click="goToSearch(s.full)">
+                        <span class="smodal__suggest-text">
+                          <strong class="smodal__suggest-match">{{ queryTrim }}</strong>{{ s.suffix }}
+                        </span>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </div>
-            </label>
-          </div>
+            </div>
 
-          <div v-if="showLiveSuggestions" class="smodal__card">
-            <h3 class="smodal__h">Suggestions</h3>
-            <ul class="smodal__suggest-list" role="listbox" aria-label="Search suggestions">
-              <li v-for="(s, i) in liveSuggestions" :key="i">
-                <button type="button" class="smodal__suggest" @click="goToSearch(s.full)">
-                  <span class="smodal__suggest-text">
-                    <strong class="smodal__suggest-match">{{ queryTrim }}</strong>{{ s.suffix }}
+          <div v-if="!showLiveSuggestions" class="smodal__card">
+            <h3 class="smodal__h">Recent searches</h3>
+            <ul class="smodal__recent">
+              <li v-for="r in recentSearches" :key="r">
+                <RouterLink
+                  :to="{ name: 'search', query: { q: r } }"
+                  class="smodal__recent-link"
+                  @click="emit('close')"
+                >
+                  <span class="smodal__recent-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path
+                        d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
                   </span>
-                </button>
+                  <span class="smodal__recent-text">{{ r }}</span>
+                </RouterLink>
               </li>
             </ul>
           </div>
 
-          <template v-if="!showLiveSuggestions">
-            <div class="smodal__card">
-              <h3 class="smodal__h">Recent searches</h3>
-              <ul class="smodal__recent">
-                <li v-for="r in recentSearches" :key="r">
-                  <RouterLink
-                    :to="{ name: 'search', query: { q: r } }"
-                    class="smodal__recent-link"
-                    @click="emit('close')"
-                  >
-                    <span class="smodal__recent-icon" aria-hidden="true">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"
-                          stroke="currentColor"
-                          stroke-width="1.6"
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                        />
-                      </svg>
-                    </span>
-                    <span class="smodal__recent-text">{{ r }}</span>
-                  </RouterLink>
-                </li>
-              </ul>
-            </div>
-
-            <div class="smodal__card">
-              <h3 class="smodal__h">Buy again</h3>
-              <ul class="smodal__buy-list">
-                <li v-for="p in buyAgain" :key="p.title">
-                  <div class="smodal__buy-row">
-                    <RouterLink
-                      :to="{ name: 'product', params: { slug: p.slug } }"
-                      class="smodal__buy-main"
-                      @click="emit('close')"
-                    >
-                      <img :src="p.image" width="56" height="56" alt="" class="smodal__buy-thumb" />
-                      <span class="smodal__buy-name">{{ p.title }}</span>
-                      <span class="smodal__buy-price">${{ p.price.toFixed(2) }}</span>
-                    </RouterLink>
-                    <span class="smodal__ac">
-                      <AddToCartButton variant="icon" label="Add to cart" />
-                    </span>
-                  </div>
-                </li>
-              </ul>
-            </div>
-
-            <div class="smodal__card">
-              <h3 class="smodal__h">Recently viewed</h3>
-              <ul class="smodal__viewed">
-                <li v-for="(p, idx) in recentlyViewed" :key="`${p.title}-${idx}`">
+          <div class="smodal__card">
+            <h3 class="smodal__h">Buy again</h3>
+            <ul class="smodal__buy-list">
+              <li v-for="p in buyAgain" :key="p.title">
+                <div class="smodal__buy-row">
                   <RouterLink
                     :to="{ name: 'product', params: { slug: p.slug } }"
-                    class="smodal__viewed-link"
+                    class="smodal__buy-main"
                     @click="emit('close')"
                   >
-                    <img :src="p.image" width="80" height="80" alt="" class="smodal__viewed-thumb" />
-                    <span class="smodal__viewed-body">
-                      <span class="smodal__viewed-title">{{ p.title }}</span>
-                      <span class="smodal__viewed-price">${{ p.price.toFixed(2) }}</span>
-                    </span>
+                    <img :src="p.image" width="56" height="56" alt="" class="smodal__buy-thumb" />
+                    <span class="smodal__buy-name">{{ p.title }}</span>
+                    <span class="smodal__buy-price">${{ p.price.toFixed(2) }}</span>
                   </RouterLink>
-                </li>
-              </ul>
-            </div>
-          </template>
+                  <span class="smodal__ac">
+                    <AddToCartButton variant="icon" label="Add to cart" />
+                  </span>
+                </div>
+              </li>
+            </ul>
+          </div>
+
+          <div class="smodal__card">
+            <h3 class="smodal__h">Recently viewed</h3>
+            <ul class="smodal__viewed">
+              <li v-for="(p, idx) in recentlyViewed" :key="`${p.title}-${idx}`">
+                <RouterLink
+                  :to="{ name: 'product', params: { slug: p.slug } }"
+                  class="smodal__viewed-link"
+                  @click="emit('close')"
+                >
+                  <img :src="p.image" width="80" height="80" alt="" class="smodal__viewed-thumb" />
+                  <span class="smodal__viewed-body">
+                    <span class="smodal__viewed-title">{{ p.title }}</span>
+                    <span class="smodal__viewed-price">${{ p.price.toFixed(2) }}</span>
+                  </span>
+                </RouterLink>
+              </li>
+            </ul>
+          </div>
+        </div>
         </div>
       </div>
     </div>
@@ -219,44 +225,55 @@ function onInputEnter() {
 .smodal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(28, 32, 36, 0.72);
+  background: rgba(28, 32, 36, 0.42);
 }
 
 .smodal__panel {
   position: relative;
   width: min(560px, 100%);
-  max-height: calc(100vh - 96px);
-  overflow: auto;
   margin-top: 8px;
-  padding: 20px 20px 24px;
-  background: var(--color-mini-cart-surface);
+  padding: 0;
+  overflow: visible;
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-radius: 12px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
 }
 
+.smodal__panel-inner {
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+  padding: 24px 16px;
+}
+
 .smodal__close {
   position: absolute;
-  top: 10px;
-  right: 12px;
-  z-index: 1;
-  width: 40px;
-  height: 40px;
+  top: -14px;
+  right: -14px;
+  z-index: 3;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
   border: none;
-  border-radius: 8px;
-  background: transparent;
-  font-size: 26px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1px 4px rgba(0, 30, 64, 0.12);
+  font-size: 22px;
   line-height: 1;
   cursor: pointer;
   color: var(--color-text-soft);
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .smodal__close:hover,
 .smodal__close:focus-visible {
-  background: rgba(255, 255, 255, 0.55);
+  background: #fff;
   color: var(--color-dark-blue);
+  box-shadow: 0 2px 8px rgba(0, 30, 64, 0.16);
   outline: none;
 }
 
@@ -264,7 +281,6 @@ function onInputEnter() {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-top: 8px;
 }
 
 .smodal__card {
@@ -275,10 +291,31 @@ function onInputEnter() {
 }
 
 .smodal__card--search {
-  padding: 14px 16px 14px;
+  padding: 0;
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.smodal__search-body {
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.smodal__search-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.smodal__card--search:focus-within {
+  border-color: var(--color-light-blue);
+  box-shadow: 0 0 0 1px rgba(15, 83, 149, 0.08), 0 1px 3px rgba(0, 30, 64, 0.06);
 }
 
 .smodal__search-label {
+  flex: 1;
+  min-width: 0;
   display: block;
   margin: 0;
 }
@@ -286,25 +323,25 @@ function onInputEnter() {
 .smodal__input-shell {
   display: flex;
   align-items: center;
-  gap: 10px;
-  min-height: 48px;
-  padding: 4px 4px 4px 16px;
-  background: #fff;
-  border: 2px solid #e2e8f0;
+  gap: 8px;
+  min-height: 44px;
+  height: 100%;
+  padding: 12px 20px;
+  background: #f8fafc;
   border-radius: 8px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .smodal__input-shell:focus-within {
-  border-color: var(--color-light-blue);
-  box-shadow: 0 0 0 1px rgba(15, 83, 149, 0.12);
+  background: #fff;
+  border-color: rgba(15, 83, 149, 0.35);
 }
 
 .smodal__input {
   flex: 1;
   min-width: 0;
   border: none;
-  padding: 10px 8px 10px 0;
+  padding: 8px 4px 8px 0;
   margin: 0;
   font-size: 16px;
   font-family: inherit;
@@ -320,7 +357,7 @@ function onInputEnter() {
 .smodal__input-icon {
   display: flex;
   flex-shrink: 0;
-  padding-right: 12px;
+  padding-right: 10px;
   opacity: 0.85;
 }
 
@@ -331,6 +368,20 @@ function onInputEnter() {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-caption);
+}
+
+.smodal__attached-suggest {
+  border-top: 1px solid rgba(195, 198, 209, 0.55);
+  padding: 10px 12px 6px;
+}
+
+.smodal__h--attached {
+  margin: 0 0 6px;
+  padding: 0 2px;
+}
+
+.smodal__attached-suggest .smodal__suggest-list {
+  margin: 0 -4px;
 }
 
 .smodal__recent {
@@ -490,7 +541,7 @@ function onInputEnter() {
   display: block;
   width: 100%;
   margin: 0;
-  padding: 12px 0;
+  padding: 10px 6px;
   border: none;
   border-bottom: 1px solid rgba(195, 198, 209, 0.35);
   background: transparent;
@@ -500,13 +551,13 @@ function onInputEnter() {
   cursor: pointer;
 }
 
-.smodal__suggest-list li:last-child .smodal__suggest {
+.smodal__attached-suggest .smodal__suggest-list li:last-child .smodal__suggest {
   border-bottom: none;
-  padding-bottom: 0;
+  padding-bottom: 4px;
 }
 
-.smodal__suggest-list li:first-child .smodal__suggest {
-  padding-top: 0;
+.smodal__attached-suggest .smodal__suggest-list li:first-child .smodal__suggest {
+  padding-top: 2px;
 }
 
 .smodal__suggest:hover,
