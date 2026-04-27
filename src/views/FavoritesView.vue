@@ -2,6 +2,8 @@
 import { computed, inject, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
+import PlpFiltersShell from '../components/PlpFiltersShell.vue'
+import { usePlpFilterChecks } from '../composables/usePlpFilterChecks'
 import { media } from '../assets/media'
 import { favoritesFilters, orderedFavoriteProducts } from '../data/site'
 import { authKey } from '../layout/auth'
@@ -51,6 +53,8 @@ const favoriteProducts = computed(() => {
 })
 
 const count = computed(() => favoriteProducts.value.length)
+
+const { activeFilterCount, isOn, onCheck } = usePlpFilterChecks(favoritesFilters)
 </script>
 
 <template>
@@ -93,12 +97,17 @@ const count = computed(() => favoriteProducts.value.length)
           </div>
         </div>
 
-        <div v-else class="layout">
-          <aside class="filters" aria-label="Filters">
-            <div v-for="g in favoritesFilters" :key="g.title" class="filters__group">
+        <PlpFiltersShell v-else theme="dark" :active-filter-count="activeFilterCount">
+          <template #filters>
+            <div v-for="(g, gi) in favoritesFilters" :key="g.title" class="filters__group">
               <h3 class="filters__h">{{ g.title }}</h3>
-              <label v-for="(opt, idx) in g.options" :key="idx" class="filters__row">
-                <input type="checkbox" class="filters__cb" :checked="!!opt.checked" />
+              <label v-for="(opt, oi) in g.options" :key="oi" class="filters__row">
+                <input
+                  type="checkbox"
+                  class="filters__cb"
+                  :checked="isOn(gi, oi)"
+                  @change="onCheck(gi, oi, $event)"
+                />
                 <span>{{ opt.label }}</span>
               </label>
             </div>
@@ -113,7 +122,7 @@ const count = computed(() => favoriteProducts.value.length)
               </span>
               Compare Items (3)
             </RouterLink>
-          </aside>
+          </template>
 
           <div class="results">
             <div class="grid">
@@ -135,7 +144,7 @@ const count = computed(() => favoriteProducts.value.length)
               <button type="button" class="pg pg--arrow" aria-label="Next page">›</button>
             </nav>
           </div>
-        </div>
+        </PlpFiltersShell>
       </div>
     </div>
   </div>
@@ -340,20 +349,6 @@ const count = computed(() => favoriteProducts.value.length)
 
 .empty__btn--ghost:hover {
   background: rgba(255, 255, 255, 0.08);
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 40px;
-}
-
-@media (min-width: 900px) {
-  .layout {
-    grid-template-columns: var(--plp-sidebar-w) minmax(0, 1fr);
-    column-gap: var(--plp-layout-gap);
-    align-items: start;
-  }
 }
 
 .filters__group {

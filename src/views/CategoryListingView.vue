@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import ProductCard from '../components/ProductCard.vue'
+import PlpFiltersShell from '../components/PlpFiltersShell.vue'
+import { usePlpFilterChecks } from '../composables/usePlpFilterChecks'
 import { media } from '../assets/media'
 import {
   categoryHero,
@@ -32,6 +34,8 @@ const sortOptions = [
 ]
 
 const sortBy = ref('most-relevant')
+
+const { activeFilterCount, isOn, onCheck } = usePlpFilterChecks(categoryListingFilters)
 </script>
 
 <template>
@@ -81,12 +85,17 @@ const sortBy = ref('most-relevant')
 
     <div class="sheet">
       <div class="wrap">
-        <div class="layout">
-          <aside class="filters" aria-label="Filters">
-            <div v-for="g in categoryListingFilters" :key="g.title" class="filters__group">
+        <PlpFiltersShell :active-filter-count="activeFilterCount">
+          <template #filters>
+            <div v-for="(g, gi) in categoryListingFilters" :key="g.title" class="filters__group">
               <h3 class="filters__h">{{ g.title }}</h3>
-              <label v-for="(opt, idx) in g.options" :key="idx" class="filters__row">
-                <input type="checkbox" class="filters__cb" :checked="!!opt.checked" />
+              <label v-for="(opt, oi) in g.options" :key="oi" class="filters__row">
+                <input
+                  type="checkbox"
+                  class="filters__cb"
+                  :checked="isOn(gi, oi)"
+                  @change="onCheck(gi, oi, $event)"
+                />
                 <span>{{ opt.label }}</span>
               </label>
             </div>
@@ -128,7 +137,7 @@ const sortBy = ref('most-relevant')
                 <a href="tel:+18773352621">(877) 335-2621</a>
               </p>
             </div>
-          </aside>
+          </template>
 
           <div class="results">
             <div class="grid">
@@ -145,7 +154,7 @@ const sortBy = ref('most-relevant')
               <button type="button" class="pg pg--arrow" aria-label="Next page">›</button>
             </nav>
           </div>
-        </div>
+        </PlpFiltersShell>
       </div>
     </div>
   </div>
@@ -359,20 +368,6 @@ const sortBy = ref('most-relevant')
 .sheet {
   background: var(--plp-content-bg);
   padding: 28px 0 0;
-}
-
-.layout {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 40px;
-}
-
-@media (min-width: 900px) {
-  .layout {
-    grid-template-columns: var(--plp-sidebar-w) minmax(0, 1fr);
-    column-gap: var(--plp-layout-gap);
-    align-items: start;
-  }
 }
 
 .filters__group {

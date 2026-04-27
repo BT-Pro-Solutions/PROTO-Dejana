@@ -303,10 +303,10 @@ function onLogout() {
             <span class="header__sr-only">Opens in new tab</span>
           </a>
         </div>
-        <div class="header__ship">
+        <RouterLink :to="{ name: 'shipping-policy' }" class="header__ship">
           <img :src="media.icons.shippingFast" width="20" height="20" alt="" />
           <span>FREE Shipping within 24 hrs*</span>
-        </div>
+        </RouterLink>
       </nav>
     </div>
   </header>
@@ -420,10 +420,14 @@ function onLogout() {
             </a>
           </nav>
           <div class="header-mnav__foot">
-            <p class="header-mnav__ship">
+            <RouterLink
+              :to="{ name: 'shipping-policy' }"
+              class="header-mnav__ship"
+              @click="closeMobileNav"
+            >
               <img :src="media.icons.shippingFast" width="18" height="18" alt="" />
               <span>FREE Shipping within 24 hrs*</span>
-            </p>
+            </RouterLink>
             <a href="tel:+18773352821" class="header-mnav__phone">(877) 335-2821</a>
           </div>
         </div>
@@ -701,14 +705,14 @@ function onLogout() {
   padding: 0;
   border: 2px solid var(--color-light-blue);
   border-radius: 50%;
-  background-color: #fff;
+  background-color: var(--color-light-blue);
+  color: #fff;
   cursor: pointer;
   font-family: inherit;
 }
 
 .header__account-trigger:hover {
-  background: var(--color-light-blue);
-  color: #fff;
+  background: var(--color-dark-blue);
 }
 
 .header__account-initials {
@@ -979,6 +983,18 @@ function onLogout() {
   letter-spacing: -0.4px;
   line-height: 1.5;
   flex-shrink: 0;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.header__ship:hover {
+  opacity: 0.94;
+}
+
+.header__ship:focus-visible {
+  outline: 2px solid var(--color-light-blue);
+  outline-offset: 2px;
 }
 
 @media (min-width: 1024px) {
@@ -1175,6 +1191,14 @@ function onLogout() {
   font-weight: 700;
   line-height: 1.4;
   color: rgba(255, 255, 255, 0.95);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.header-mnav__ship:focus-visible {
+  outline: 2px solid var(--color-light-blue);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .header-mnav__ship img {

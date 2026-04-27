@@ -3,9 +3,12 @@ import { computed } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { media } from '../assets/media'
 import { getLegalPage } from '../data/legalPages'
+import { publicUrl } from '../lib/publicUrl'
 
 const route = useRoute()
 const page = computed(() => getLegalPage(route.name as string))
+const isShippingPolicy = computed(() => route.name === 'shipping-policy')
+const shippingMapSrc = computed(() => publicUrl('assets/shipping-map.png'))
 
 const lastUpdated = 'April 27, 2026'
 </script>
@@ -27,6 +30,21 @@ const lastUpdated = 'April 27, 2026'
     <article class="legal__body">
       <div class="legal__prose">
         <p class="legal__intro">{{ page.intro }}</p>
+
+        <figure v-if="isShippingPolicy" class="legal__map">
+          <img
+            class="legal__map-img"
+            :src="shippingMapSrc"
+            alt="Reference map of shipping regions and estimated delivery zones within the United States."
+            width="3199"
+            height="1823"
+            loading="lazy"
+            decoding="async"
+          />
+          <figcaption class="legal__map-cap">
+            Illustrative coverage map; actual transit times depend on inventory, carrier, and destination.
+          </figcaption>
+        </figure>
 
         <section v-for="(sec, i) in page.sections" :key="i" class="legal__sec">
           <h2 class="legal__h2">{{ sec.title }}</h2>
@@ -127,6 +145,32 @@ const lastUpdated = 'April 27, 2026'
   font-size: 1.0625rem;
   line-height: 1.7;
   color: var(--color-text-muted);
+}
+
+.legal__map {
+  margin: 0 0 2.5rem;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-muted);
+  box-shadow: 0 8px 28px rgba(0, 30, 64, 0.08);
+}
+
+.legal__map-img {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+.legal__map-cap {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--color-text-soft);
+  background: var(--color-surface);
+  border-top: 1px solid var(--color-border-strong);
 }
 
 .legal__sec {
