@@ -40,13 +40,13 @@ const buyAgain: DemoProduct[] = [
 
 const recentlyViewed = [
   {
-    title: 'Hydraulic Unit Extreme V',
+    title: 'Hydraulic Unit Extreme',
     price: 199.99,
-    image: publicUrl('assets/product-fisher-plow-thumb-2.png'),
+    image: publicUrl('assets/product-fisher-plow-thumb-3.png'),
     slug: 'fisher-hs-compact',
   },
   {
-    title: 'Hydraulic Unit Extreme V',
+    title: 'Hydraulic Unit Ultra',
     price: 199.99,
     image: publicUrl('assets/product-fisher-plow-thumb-2.png'),
     slug: 'fisher-hs-compact',
@@ -89,6 +89,16 @@ function goToSearch(q: string) {
 function onInputEnter() {
   goToSearch(queryTrim.value)
 }
+
+function goToSearchFromIcon() {
+  emit('close')
+  const term = queryTrim.value
+  if (term) {
+    router.push({ name: 'search', query: { q: term } })
+  } else {
+    router.push({ name: 'search' })
+  }
+}
 </script>
 
 <template>
@@ -125,9 +135,14 @@ function onInputEnter() {
                           autocomplete="off"
                           @keydown.enter.prevent="onInputEnter"
                         />
-                        <span class="smodal__input-icon" aria-hidden="true">
+                        <button
+                          type="button"
+                          class="smodal__input-icon"
+                          aria-label="Search"
+                          @click="goToSearchFromIcon"
+                        >
                           <img :src="media.icons.search" width="18" height="18" alt="" />
-                        </span>
+                        </button>
                       </div>
                     </label>
                   </div>
@@ -240,7 +255,8 @@ function onInputEnter() {
 .smodal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(28, 32, 36, 0.42);
+  background: rgba(28, 32, 36, 0.8);
+  backdrop-filter: blur(2px);
 }
 
 .smodal__panel {
@@ -251,7 +267,6 @@ function onInputEnter() {
   overflow: visible;
   background: rgba(255, 255, 255, 0.5);
   backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
   border-radius: 12px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.28);
 }
@@ -259,7 +274,7 @@ function onInputEnter() {
 .smodal__panel-inner {
   max-height: calc(100vh - 96px);
   overflow: auto;
-  padding: 24px 16px;
+  padding: 16px;
 }
 
 .smodal__close {
@@ -427,9 +442,27 @@ function onInputEnter() {
 
 .smodal__input-icon {
   display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
-  padding-right: 10px;
+  margin: 0;
+  padding: 4px 10px 4px 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
   opacity: 0.85;
+  transition: opacity 0.12s ease;
+}
+
+.smodal__input-icon:hover {
+  opacity: 1;
+}
+
+.smodal__input-icon:focus-visible {
+  outline: 2px solid var(--color-light-blue, #4a90d9);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .smodal__h {
