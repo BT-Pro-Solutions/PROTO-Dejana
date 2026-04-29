@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, ref, watch } from 'vue'
+import { computed, inject, ref, useTemplateRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { cartLines as seedCartLines, cartSubtotal, type CartLine } from '../data/site'
 import { media } from '../assets/media'
@@ -63,6 +63,18 @@ const cardNumber = ref('')
 const cardExp = ref('')
 const cardCvc = ref('')
 
+const billingSameAsShipping = ref(true)
+const billFirstName = ref('')
+const billLastName = ref('')
+const billCompany = ref('')
+const billCountry = ref('US')
+const billCity = ref('')
+const billStateCode = ref('IN')
+const billAddress1 = ref('')
+const billAddress2 = ref('')
+const billZip = ref('')
+const billPhone = ref('')
+
 const orderPlaced = ref(false)
 const demoOrderId = ref('')
 
@@ -78,6 +90,27 @@ const usStates = [
 ]
 
 const countryLabel = computed(() => (country.value === 'US' ? 'United States' : 'Canada'))
+
+const billCountryLabel = computed(() => (billCountry.value === 'US' ? 'United States' : 'Canada'))
+
+function syncShippingToBilling() {
+  billFirstName.value = firstName.value
+  billLastName.value = lastName.value
+  billCompany.value = company.value
+  billCountry.value = country.value
+  billCity.value = city.value
+  billStateCode.value = stateCode.value
+  billAddress1.value = address1.value
+  billAddress2.value = address2.value
+  billZip.value = zip.value
+  billPhone.value = phone.value
+}
+
+watch(billingSameAsShipping, (same, wasSame) => {
+  if (!same && wasSame) syncShippingToBilling()
+})
+
+const billingAddressForm = useTemplateRef<HTMLFormElement>('billingAddressForm')
 
 const shippingSummary = computed(() => {
   const name = [firstName.value, lastName.value].filter(Boolean).join(' ')
@@ -110,6 +143,20 @@ const shippingReviewLines = computed(() => {
       `${ship.label}${ship.amount === 0 ? ' — FREE' : ` — ${money(ship.amount)}`}`,
     )
   }
+  return out
+})
+
+const billingReviewLines = computed(() => {
+  const out: string[] = []
+  const name = [billFirstName.value, billLastName.value].filter(Boolean).join(' ')
+  if (name) out.push(name)
+  if (billCompany.value) out.push(billCompany.value)
+  if (billAddress1.value) out.push(billAddress1.value)
+  if (billAddress2.value) out.push(billAddress2.value)
+  const cityLine = [billCity.value, billStateCode.value, billZip.value].filter(Boolean).join(' ')
+  if (cityLine) out.push(cityLine)
+  out.push(billCountryLabel.value)
+  if (billPhone.value) out.push(billPhone.value)
   return out
 })
 
@@ -371,6 +418,13 @@ function advanceFromShipping() {
 }
 
 function advanceFromPayment() {
+  if (!billingSameAsShipping.value) {
+    const form = billingAddressForm.value
+    if (form && !form.checkValidity()) {
+      form.reportValidity()
+      return
+    }
+  }
   currentStep.value = 2
   maxReached.value = Math.max(maxReached.value, 2)
 }
@@ -873,6 +927,125 @@ const stepsMeta = [
                   </div>
                 </div>
 
+                <div class="billing-block">
+                  <label class="billing-same" for="billing-same-checkbox">
+                    <input
+                      id="billing-same-checkbox"
+                      v-model="billingSameAsShipping"
+                      type="checkbox"
+                    />
+                    <span>Billing address same as Shipping</span>
+                  </label>
+                  <form
+                    v-if="!billingSameAsShipping"
+                    id="billing-address-fields"
+                    ref="billingAddressForm"
+                    class="billing-address-form"
+                    @submit.prevent
+                  >
+                    <h2 class="billing-block__h">Billing address</h2>
+                    <div class="form-grid">
+                      <label class="field">
+                        <span class="field__l">First name <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="billFirstName"
+                          name="billing-given-name"
+                          type="text"
+                          autocomplete="billing given-name"
+                          required
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">Last name <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="billLastName"
+                          name="billing-family-name"
+                          type="text"
+                          autocomplete="billing family-name"
+                          required
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">Company</span>
+                        <input
+                          v-model="billCompany"
+                          name="billing-organization"
+                          type="text"
+                          autocomplete="billing organization"
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">Country <abbr title="required">*</abbr></span>
+                        <select v-model="billCountry" name="billing-country" autocomplete="billing country" required>
+                          <option value="US">United States</option>
+                          <option value="CA">Canada</option>
+                        </select>
+                      </label>
+                      <label class="field">
+                        <span class="field__l">City <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="billCity"
+                          name="billing-city"
+                          type="text"
+                          autocomplete="billing address-level2"
+                          required
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">State <abbr title="required">*</abbr></span>
+                        <select
+                          v-model="billStateCode"
+                          name="billing-state"
+                          autocomplete="billing address-level1"
+                          required
+                        >
+                          <option v-for="st in usStates" :key="st.abbr" :value="st.abbr">{{ st.abbr }}</option>
+                        </select>
+                      </label>
+                      <label class="field field--full">
+                        <span class="field__l">Address line 1 <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="billAddress1"
+                          name="billing-address-line1"
+                          type="text"
+                          autocomplete="billing address-line1"
+                          required
+                        />
+                      </label>
+                      <label class="field field--full">
+                        <span class="field__l">Address line 2</span>
+                        <input
+                          v-model="billAddress2"
+                          name="billing-address-line2"
+                          type="text"
+                          autocomplete="billing address-line2"
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">ZIP code <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="billZip"
+                          name="billing-postal-code"
+                          type="text"
+                          autocomplete="billing postal-code"
+                          inputmode="numeric"
+                          required
+                        />
+                      </label>
+                      <label class="field">
+                        <span class="field__l">Phone <abbr title="required">*</abbr></span>
+                        <input
+                          v-model="billPhone"
+                          name="billing-tel"
+                          type="tel"
+                          autocomplete="billing tel"
+                          required
+                        />
+                      </label>
+                    </div>
+                  </form>
+                </div>
+
                 <div class="panel-actions">
                   <button type="button" class="btn-primary" @click="advanceFromPayment">Save &amp; continue</button>
 
@@ -889,6 +1062,14 @@ const stepsMeta = [
                     <h3 id="review-ship" class="review-block__h">Shipping</h3>
                     <ul class="review-block__list">
                       <li v-for="(line, idx) in shippingReviewLines" :key="'s' + idx">{{ line }}</li>
+                    </ul>
+                  </section>
+
+                  <section class="review-block" aria-labelledby="review-bill">
+                    <h3 id="review-bill" class="review-block__h">Billing address</h3>
+                    <p v-if="billingSameAsShipping" class="review-block__same">Same as shipping address</p>
+                    <ul v-else class="review-block__list">
+                      <li v-for="(line, idx) in billingReviewLines" :key="'b' + idx">{{ line }}</li>
                     </ul>
                   </section>
 
@@ -2278,6 +2459,51 @@ const stepsMeta = [
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-dark-blue);
+}
+
+.billing-block {
+  width: 100%;
+  max-width: 520px;
+  margin-top: 24px;
+}
+
+.billing-same {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-dark-blue);
+  cursor: pointer;
+  user-select: none;
+}
+
+.billing-same input {
+  flex-shrink: 0;
+  margin-top: 2px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-light-blue);
+  cursor: pointer;
+}
+
+.billing-block__h {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-dark-blue);
+}
+
+.billing-address-form .form-grid {
+  margin-bottom: 0;
+}
+
+.review-block__same {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--color-text-muted);
 }
 
 .guest-ship-review__line {
