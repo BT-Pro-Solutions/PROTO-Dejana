@@ -282,7 +282,8 @@ const categories = [
           Since Pete Dejana’s humble start in 1957, Dejana has been dedicated to providing the highest level of
           quality to its customers.
         </p>
-        <RouterLink to="/shop" class="heritage__btn">
+        <a href="https://dejana.com/about-us/" class="heritage__btn" target="_blank" rel="noopener">
+  
           Read The Full Story
           <svg class="heritage__btn-arrow" width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true">
             <path
@@ -293,7 +294,7 @@ const categories = [
               stroke-linejoin="round"
             />
           </svg>
-        </RouterLink>
+        </a>
       </div>
     </section>
   </div>

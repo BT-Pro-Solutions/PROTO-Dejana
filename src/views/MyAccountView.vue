@@ -172,7 +172,6 @@ const nav = [
         <div class="page-head__row">
           <div>
             <h1 class="page-head__title">My account</h1>
-            <p class="page-head__meta">Demo profile — actions below are for layout only.</p>
           </div>
           <button type="button" class="page-head__signout" @click="signOut">Sign out</button>
         </div>

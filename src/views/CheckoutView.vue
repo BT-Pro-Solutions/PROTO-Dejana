@@ -482,6 +482,11 @@ const stepsMeta = [
                 {{ checkoutTitle }}
               </h1>
               <p v-if="checkoutSubtitle" class="checkout-sub">{{ checkoutSubtitle }}</p>
+              <p v-else-if="!isLoggedIn" class="checkout-sub checkout-guest-account">
+                Have an account?
+                <RouterLink to="/login" class="checkout-guest-account__signin">Sign In</RouterLink>
+                for faster checkout
+              </p>
             </div>
             <div class="step-dots" role="group" aria-label="Checkout progress">
               <div
@@ -1392,6 +1397,18 @@ const stepsMeta = [
   font-weight: 500;
   color: var(--color-text-muted);
   letter-spacing: -0.02em;
+}
+
+.checkout-guest-account__signin {
+  margin: 0 0.25em;
+  font-weight: 600;
+  color: var(--color-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.checkout-guest-account__signin:hover {
+  color: var(--color-text);
 }
 
 .checkout-top__bar > .h1 {
