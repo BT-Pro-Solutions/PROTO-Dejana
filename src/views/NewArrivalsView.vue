@@ -80,7 +80,7 @@ const { activeFilterCount, isOn, onCheck } = usePlpFilterChecks(newArrivalsFilte
           <div class="results">
             <div class="grid">
               <div v-for="p in listingProducts" :key="p.id" class="grid__cell">
-                <ProductCard :product="p" category-grid show-new-badge dark-grid />
+                <ProductCard :product="p" category-grid show-new-badge dark-grid show-compare />
               </div>
             </div>
             <nav class="pagination" aria-label="Pagination">

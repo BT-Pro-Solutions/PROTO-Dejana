@@ -252,56 +252,18 @@ function onLogout() {
             :class="{ 'header__nav-link--active': activeNav === 'favorites' }"
             >Favorites</RouterLink
           >
-          <a
-            href="https://dejana.com/about-us/"
-            class="header__nav-link header__nav-link--external"
-            target="_blank"
-            rel="noopener noreferrer"
+          <RouterLink
+            to="/about-us"
+            class="header__nav-link"
+            :class="{ 'header__nav-link--active': activeNav === 'about-us' }"
+            >About Us</RouterLink
           >
-            About Us
-            <svg
-              class="header__ext-ico"
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              aria-hidden="true"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <path d="M15 3h6v6" />
-              <path d="M10 14 21 3" />
-            </svg>
-            <span class="header__sr-only">Opens in new tab</span>
-          </a>
-          <a
-            href="https://dejana.com/contact-us/"
-            class="header__nav-link header__nav-link--external"
-            target="_blank"
-            rel="noopener noreferrer"
+          <RouterLink
+            to="/contact"
+            class="header__nav-link"
+            :class="{ 'header__nav-link--active': activeNav === 'contact' }"
+            >Contact</RouterLink
           >
-            Contact
-            <svg
-              class="header__ext-ico"
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              aria-hidden="true"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-              <path d="M15 3h6v6" />
-              <path d="M10 14 21 3" />
-            </svg>
-            <span class="header__sr-only">Opens in new tab</span>
-          </a>
         </div>
         <RouterLink :to="{ name: 'shipping-policy' }" class="header__ship">
           <img :src="media.icons.shippingFast" width="20" height="20" alt="" />
@@ -372,52 +334,20 @@ function onLogout() {
               @click="closeMobileNav"
               >Favorites</RouterLink
             >
-            <a
-              href="https://dejana.com/about-us/"
-              class="header-mnav__link header-mnav__link--external"
-              target="_blank"
-              rel="noopener noreferrer"
+            <RouterLink
+              to="/about-us"
+              class="header-mnav__link"
+              :class="{ 'header-mnav__link--active': activeNav === 'about-us' }"
               @click="closeMobileNav"
+              >About Us</RouterLink
             >
-              About Us
-              <svg
-                class="header-mnav__ext"
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                aria-hidden="true"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <path d="M15 3h6v6" />
-                <path d="M10 14 21 3" />
-              </svg>
-            </a>
-            <a
-              href="https://dejana.com/contact-us/"
-              class="header-mnav__link header-mnav__link--external"
-              target="_blank"
-              rel="noopener noreferrer"
+            <RouterLink
+              to="/contact"
+              class="header-mnav__link"
+              :class="{ 'header-mnav__link--active': activeNav === 'contact' }"
               @click="closeMobileNav"
+              >Contact</RouterLink
             >
-              Contact
-              <svg
-                class="header-mnav__ext"
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                aria-hidden="true"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-                <path d="M15 3h6v6" />
-                <path d="M10 14 21 3" />
-              </svg>
-            </a>
           </nav>
           <div class="header-mnav__foot">
             <RouterLink

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import MonthlyGiveawayPopup from '../components/MonthlyGiveawayPopup.vue'
 import ProductHorizontalStrip from '../components/ProductHorizontalStrip.vue'
 import { media } from '../assets/media'
 import { homeBestSellers } from '../data/site'
@@ -108,6 +109,7 @@ const categories = [
 
 <template>
   <div class="home">
+    <MonthlyGiveawayPopup />
     <section
       class="hero"
       aria-roledescription="carousel"
@@ -282,8 +284,7 @@ const categories = [
           Since Pete Dejana’s humble start in 1957, Dejana has been dedicated to providing the highest level of
           quality to its customers.
         </p>
-        <a href="https://dejana.com/about-us/" class="heritage__btn" target="_blank" rel="noopener">
-  
+        <RouterLink to="/about-us" class="heritage__btn">
           Read The Full Story
           <svg class="heritage__btn-arrow" width="18" height="12" viewBox="0 0 18 12" fill="none" aria-hidden="true">
             <path
@@ -294,7 +295,7 @@ const categories = [
               stroke-linejoin="round"
             />
           </svg>
-        </a>
+        </RouterLink>
       </div>
     </section>
   </div>

@@ -178,6 +178,8 @@ const activeNav = computed(() => {
   if (p.startsWith('/cart')) return 'cart'
   if (p.startsWith('/checkout')) return 'checkout'
   if (p.startsWith('/account')) return 'account'
+  if (p.startsWith('/contact')) return 'contact'
+  if (p.startsWith('/about-us')) return 'about-us'
   return ''
 })
 
@@ -186,7 +188,9 @@ const contactLabel = computed(() =>
   activeNav.value === 'shop' ||
   activeNav.value === 'category' ||
   activeNav.value === 'new-arrivals' ||
-  activeNav.value === 'favorites'
+  activeNav.value === 'favorites' ||
+  activeNav.value === 'contact' ||
+  activeNav.value === 'about-us'
     ? 'Need Assistance?'
     : 'We’re Here To Help',
 )

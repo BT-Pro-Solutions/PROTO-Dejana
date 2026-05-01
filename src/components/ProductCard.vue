@@ -5,6 +5,7 @@ import StarRating from './StarRating.vue'
 import AddToCartButton from './AddToCartButton.vue'
 import type { DemoProduct } from '../data/products'
 import { favoritesKey } from '../layout/favorites'
+import { toastKey } from '../layout/toast'
 
 const props = withDefaults(
   defineProps<{
@@ -31,6 +32,7 @@ const props = withDefaults(
 )
 
 const favorites = inject(favoritesKey, null)
+const toast = inject(toastKey, null)
 
 const productSlug = computed(() => props.product.slug ?? props.product.id)
 
@@ -60,7 +62,14 @@ function toggleWish(e: MouseEvent) {
 function toggleCompare(e: MouseEvent) {
   e.preventDefault()
   e.stopPropagation()
-  inCompare.value = !inCompare.value
+  const adding = !inCompare.value
+  inCompare.value = adding
+  if (adding && toast) {
+    toast.push({
+      message: `${props.product.title} added to compare.`,
+      action: { label: 'View compare', to: '/compare' },
+    })
+  }
 }
 </script>
 
@@ -111,7 +120,7 @@ function toggleCompare(e: MouseEvent) {
     </RouterLink>
     <AddToCartButton v-if="showAddToCart" block class="card__atc" :product="product" />
     <button
-      v-else-if="showCompare"
+      v-if="showCompare"
       type="button"
       class="card__compare"
       :class="{ 'card__compare--active': inCompare }"

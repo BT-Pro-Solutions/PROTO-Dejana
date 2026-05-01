@@ -142,7 +142,7 @@ const { activeFilterCount, isOn, onCheck } = usePlpFilterChecks(categoryListingF
           <div class="results">
             <div class="grid">
               <div v-for="p in listingProducts" :key="p.id" class="grid__cell">
-                <ProductCard :product="p" category-grid />
+                <ProductCard :product="p" category-grid show-compare />
               </div>
             </div>
 

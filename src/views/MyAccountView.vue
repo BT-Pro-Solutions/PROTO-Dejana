@@ -139,7 +139,7 @@ const addresses = [
     id: '1',
     label: 'Default shipping',
     default: true,
-    lines: ['Mercer Fleet Services', '1200 Industrial Pkwy', 'Building C', 'Indianapolis, IN 46225', 'United States'],
+    lines: ['Jordan Mercer', '1234 Example Street', 'Kings Park, NY 11754', 'United States'],
   },
   {
     id: '2',

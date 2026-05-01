@@ -85,7 +85,7 @@ onUnmounted(() => {
             <img class="mcart__ship-icon" :src="media.icons.truckDelivery" width="22" height="16" alt="" />
             <p class="mcart__ship-text">
               <strong class="mcart__ship-free">FREE</strong> shipping available to
-              <a href="#" class="mcart__ship-zip">46845</a>
+              <a href="#" class="mcart__ship-zip">11754</a>
             </p>
           </div>
 

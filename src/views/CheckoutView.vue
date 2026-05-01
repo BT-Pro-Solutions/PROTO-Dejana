@@ -120,12 +120,6 @@ const shippingSummary = computed(() => {
   return `${[name, loc].filter(Boolean).join(' — ')} · ${ship}`
 })
 
-const paymentSummary = computed(() => {
-  if (!cardNumber.value) return 'Add payment method'
-  const last4 = cardNumber.value.replace(/\D/g, '').slice(-4)
-  return last4 ? `Card ending in ${last4}` : 'Add payment method'
-})
-
 const shippingReviewLines = computed(() => {
   const out: string[] = []
   const name = [firstName.value, lastName.value].filter(Boolean).join(' ')
@@ -207,11 +201,11 @@ const savedAddresses = ref<SavedAddr[]>([
     lastName: 'Mercer',
     company: '',
     country: 'US',
-    city: 'Fort Wayne',
-    stateCode: 'IN',
+    city: 'Kings Park',
+    stateCode: 'NY',
     address1: '1234 Example Street',
     address2: '',
-    zip: '46845',
+    zip: '11754',
     phone: '(260) 555-0199',
   },
   {
@@ -254,27 +248,61 @@ watch(
   { immediate: true },
 )
 
-type SavedPay = {
+type SavedPayCard = {
   id: string
+  kind: 'card'
   cardName: string
   cardNumber: string
   cardExp: string
   cardCvc: string
 }
 
+type SavedPayPromo = {
+  id: string
+  kind: 'promo'
+}
+
+type SavedPay = SavedPayCard | SavedPayPromo
+
+function isSavedPayCard(p: SavedPay): p is SavedPayCard {
+  return p.kind === 'card'
+}
+
 const savedPayments = ref<SavedPay[]>([
   {
     id: 'pm1',
+    kind: 'card',
     cardName: 'Jordan Mercer',
     cardNumber: '4242424242424242',
     cardExp: '08 / 28',
     cardCvc: '123',
   },
+  { id: 'promo', kind: 'promo' },
 ])
 
 const selectedPaymentId = ref(savedPayments.value[0]!.id)
 
-function applySavedPayment(p: SavedPay) {
+const guestPaymentMethod = ref<'card' | 'promo'>('card')
+const promoCode = ref('')
+const promoStepError = ref('')
+
+const isPromoPayment = computed(
+  () =>
+    (isLoggedIn.value && selectedPaymentId.value === 'promo') ||
+    (!isLoggedIn.value && guestPaymentMethod.value === 'promo'),
+)
+
+const paymentSummary = computed(() => {
+  if (isPromoPayment.value) {
+    const c = promoCode.value.trim()
+    return c ? `Promo code (${c})` : 'Promo code'
+  }
+  if (!cardNumber.value) return 'Add payment method'
+  const last4 = cardNumber.value.replace(/\D/g, '').slice(-4)
+  return last4 ? `Card ending in ${last4}` : 'Add payment method'
+})
+
+function applySavedPayment(p: SavedPayCard) {
   cardName.value = p.cardName
   cardNumber.value = p.cardNumber
   cardExp.value = p.cardExp
@@ -286,7 +314,7 @@ watch(
   () => {
     if (!isLoggedIn.value) return
     const p = savedPayments.value.find((x) => x.id === selectedPaymentId.value)
-    if (p) applySavedPayment(p)
+    if (p && isSavedPayCard(p)) applySavedPayment(p)
   },
   { immediate: true },
 )
@@ -296,7 +324,7 @@ watch(isLoggedIn, (loggedIn) => {
   const a = savedAddresses.value.find((x) => x.id === selectedAddressId.value)
   if (a) applySavedAddress(a)
   const p = savedPayments.value.find((x) => x.id === selectedPaymentId.value)
-  if (p) applySavedPayment(p)
+  if (p && isSavedPayCard(p)) applySavedPayment(p)
 })
 
 const addressModalOpen = ref(false)
@@ -343,17 +371,19 @@ function saveAddressModal() {
 
 const paymentModalOpen = ref(false)
 const paymentModalEditingId = ref<string | null>(null)
-const payDraft = ref<SavedPay>({ ...savedPayments.value[0]! })
+const firstSavedCard = savedPayments.value.find((x): x is SavedPayCard => isSavedPayCard(x))!
+const payDraft = ref<SavedPayCard>({ ...firstSavedCard })
 
 function openPaymentModal(editId?: string) {
   if (editId) {
     const p = savedPayments.value.find((x) => x.id === editId)
-    if (p) payDraft.value = { ...p }
+    if (p && isSavedPayCard(p)) payDraft.value = { ...p }
     paymentModalEditingId.value = editId
   } else {
     paymentModalEditingId.value = null
     payDraft.value = {
       id: `pm-${Date.now()}`,
+      kind: 'card',
       cardName: '',
       cardNumber: '',
       cardExp: '',
@@ -370,7 +400,8 @@ function savePaymentModal() {
     if (i >= 0) savedPayments.value[i] = { ...d }
     selectedPaymentId.value = d.id
   } else {
-    savedPayments.value = [...savedPayments.value, { ...d }]
+    const cardsOnly = savedPayments.value.filter((x) => x.id !== 'promo')
+    savedPayments.value = [...cardsOnly, { ...d }, { id: 'promo', kind: 'promo' }]
     selectedPaymentId.value = d.id
   }
   applySavedPayment(d)
@@ -418,6 +449,11 @@ function advanceFromShipping() {
 }
 
 function advanceFromPayment() {
+  if (isPromoPayment.value && !promoCode.value.trim()) {
+    promoStepError.value = 'Enter a promo code.'
+    return
+  }
+  promoStepError.value = ''
   if (!billingSameAsShipping.value) {
     const form = billingAddressForm.value
     if (form && !form.checkValidity()) {
@@ -772,46 +808,135 @@ const stepsMeta = [
                 <template v-if="isLoggedIn">
                   <p class="pay-pick-label">Payment method</p>
                   <div class="pick-list" role="radiogroup" aria-label="Payment method">
-                    <label
-                      v-for="p in savedPayments"
-                      :key="p.id"
-                      class="pick-card pick-card--pay"
-                      :class="{ 'pick-card--selected': selectedPaymentId === p.id }"
-                    >
-                      <input
-                        v-model="selectedPaymentId"
-                        class="pick-card__radio"
-                        type="radio"
-                        name="pay-method"
-                        :value="p.id"
-                      />
-                      <span class="pick-card__body">
-                        <span class="pick-card__title">Card ending in {{ p.cardNumber.replace(/\D/g, '').slice(-4) }}</span>
-                        <span class="pick-card__sub">{{ p.cardName }} · {{ p.cardExp }}</span>
-                      </span>
-                      <button
-                        type="button"
-                        class="pick-card__edit"
-                        aria-label="Update card"
-                        @click.prevent.stop="openPaymentModal(p.id)"
+                    <template v-for="p in savedPayments" :key="p.id">
+                      <label
+                        v-if="isSavedPayCard(p)"
+                        class="pick-card pick-card--pay"
+                        :class="{ 'pick-card--selected': selectedPaymentId === p.id }"
                       >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                          <path
-                            d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
-                            stroke="currentColor"
-                            stroke-width="1.75"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    </label>
+                        <input
+                          v-model="selectedPaymentId"
+                          class="pick-card__radio"
+                          type="radio"
+                          name="pay-method"
+                          :value="p.id"
+                        />
+                        <span class="pick-card__body">
+                          <span class="pick-card__title"
+                            >Card ending in {{ p.cardNumber.replace(/\D/g, '').slice(-4) }}</span
+                          >
+                          <span class="pick-card__sub">{{ p.cardName }} · {{ p.cardExp }}</span>
+                        </span>
+                        <button
+                          type="button"
+                          class="pick-card__edit"
+                          aria-label="Update card"
+                          @click.prevent.stop="openPaymentModal(p.id)"
+                        >
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                            <path
+                              d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"
+                              stroke="currentColor"
+                              stroke-width="1.75"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </label>
+                      <label
+                        v-else
+                        class="pick-card pick-card--pay pick-card--promo"
+                        :class="{ 'pick-card--selected': selectedPaymentId === p.id }"
+                      >
+                        <input
+                          v-model="selectedPaymentId"
+                          class="pick-card__radio"
+                          type="radio"
+                          name="pay-method"
+                          :value="p.id"
+                        />
+                        <span class="pick-card__body pick-card__body--promo">
+                          <span class="pick-card__title">Promo code</span>
+                          <span class="pick-card__sub">Gift card or promotional balance</span>
+                        </span>
+                      </label>
+                    </template>
                   </div>
                   <button type="button" class="btn-text" @click="openPaymentModal()">+ Add another card</button>
+                  <div v-if="selectedPaymentId === 'promo'" class="promo-inline">
+                    <label class="field field--full promo-inline__field">
+                      <span class="field__l">Promo code <abbr title="required">*</abbr></span>
+                      <input
+                        v-model="promoCode"
+                        class="promo-inline__input"
+                        type="text"
+                        name="promo-code"
+                        autocomplete="off"
+                        placeholder="Enter code"
+                        :aria-invalid="promoStepError ? 'true' : undefined"
+                        @input="promoStepError = ''"
+                      />
+                    </label>
+                    <p v-if="promoStepError" class="promo-inline__err">{{ promoStepError }}</p>
+                  </div>
                 </template>
 
                 <div v-else class="guest-pay">
-                  <div class="guest-pay-card" role="group" aria-label="Card payment">
+                  <p class="pay-pick-label">Payment method</p>
+                  <div class="pick-list" role="radiogroup" aria-label="Payment method">
+                    <label
+                      class="pick-card pick-card--pay"
+                      :class="{ 'pick-card--selected': guestPaymentMethod === 'card' }"
+                    >
+                      <input
+                        v-model="guestPaymentMethod"
+                        class="pick-card__radio"
+                        type="radio"
+                        name="guest-pay-kind"
+                        value="card"
+                      />
+                      <span class="pick-card__body">
+                        <span class="pick-card__title">Credit or debit card</span>
+                        <span class="pick-card__sub">Visa, Mastercard, Amex, Discover</span>
+                      </span>
+                    </label>
+                    <label
+                      class="pick-card pick-card--pay pick-card--promo"
+                      :class="{ 'pick-card--selected': guestPaymentMethod === 'promo' }"
+                    >
+                      <input
+                        v-model="guestPaymentMethod"
+                        class="pick-card__radio"
+                        type="radio"
+                        name="guest-pay-kind"
+                        value="promo"
+                      />
+                      <span class="pick-card__body pick-card__body--promo">
+                        <span class="pick-card__title">Promo code</span>
+                        <span class="pick-card__sub">Gift card or promotional balance</span>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div v-if="guestPaymentMethod === 'promo'" class="promo-inline promo-inline--guest">
+                    <label class="field field--full promo-inline__field">
+                      <span class="field__l">Promo code <abbr title="required">*</abbr></span>
+                      <input
+                        v-model="promoCode"
+                        class="promo-inline__input"
+                        type="text"
+                        name="guest-promo-code"
+                        autocomplete="off"
+                        placeholder="Enter code"
+                        :aria-invalid="promoStepError ? 'true' : undefined"
+                        @input="promoStepError = ''"
+                      />
+                    </label>
+                    <p v-if="promoStepError" class="promo-inline__err">{{ promoStepError }}</p>
+                  </div>
+
+                  <div v-else class="guest-pay-card" role="group" aria-label="Card payment">
                     <label class="guest-pay-field" for="guest-cc-number">
                       <span class="guest-pay-field__l">Card number</span>
                       <div class="guest-pay-inputwrap guest-pay-inputwrap--number">
@@ -1080,7 +1205,17 @@ const stepsMeta = [
 
                   <section class="review-block" aria-labelledby="review-pay">
                     <h3 id="review-pay" class="review-block__h">Payment</h3>
-                    <dl class="review-dl">
+                    <dl v-if="isPromoPayment" class="review-dl">
+                      <div class="review-dl__row">
+                        <dt>Method</dt>
+                        <dd>Promo code</dd>
+                      </div>
+                      <div class="review-dl__row">
+                        <dt>Code</dt>
+                        <dd>{{ promoCode.trim() || '—' }}</dd>
+                      </div>
+                    </dl>
+                    <dl v-else class="review-dl">
                       <div class="review-dl__row">
                         <dt>Card</dt>
                         <dd>{{ maskedCardNumber }}</dd>
@@ -2444,6 +2579,54 @@ const stepsMeta = [
 
 .pick-card__edit:hover {
   background: var(--color-gray-section);
+}
+
+.pick-card--promo {
+  grid-template-columns: auto 1fr;
+}
+
+.promo-inline {
+  margin: 4px 0 16px;
+  padding: 16px 18px;
+  border-radius: 10px;
+  border: 1px solid #dfe3ea;
+  background: #fafbfd;
+}
+
+.promo-inline--guest {
+  margin-bottom: 20px;
+}
+
+.promo-inline__field {
+  margin: 0;
+}
+
+.promo-inline__field .field__l {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-dark-blue);
+}
+
+.promo-inline__input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #c9ced8;
+  font-size: 15px;
+  font-family: inherit;
+}
+
+.promo-inline__input:focus {
+  outline: 2px solid rgba(15, 83, 149, 0.35);
+  outline-offset: 1px;
+}
+
+.promo-inline__err {
+  margin: 10px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #b42318;
 }
 
 .btn-text {

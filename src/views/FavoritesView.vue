@@ -132,6 +132,7 @@ const { activeFilterCount, isOn, onCheck } = usePlpFilterChecks(favoritesFilters
                   category-grid
                   dark-grid
                   show-add-to-cart
+                  show-compare
                   always-show-wishlist
                 />
               </div>

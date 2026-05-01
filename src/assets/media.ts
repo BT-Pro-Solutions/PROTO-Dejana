@@ -2,7 +2,7 @@ import { publicUrl } from '../lib/publicUrl'
 
 /** Public URLs for Figma exports (renamed where copied; pages/ uses export hashes). */
 export const media = {
-  headerLogo: publicUrl('assets/header-logo-dejana.png'),
+  headerLogo: publicUrl('assets/Logo.png'),
   supportAvatar: publicUrl('assets/header-support-avatar.png'),
   galleryBackdrop: publicUrl('assets/gallery-hero-backdrop.png'),
   productHero: publicUrl('assets/product-fisher-plow-hero.png'),
@@ -39,6 +39,8 @@ export const media = {
     addToCartModal: publicUrl('assets/icons/icon-add-to-cart-modal.svg'),
     wishlistHeart: publicUrl('assets/icons/icon-wishlist-heart.svg'),
     truckDelivery: publicUrl('assets/icons/icon-truck-delivery.svg'),
+    /** PDP local pickup — matches truck icon visual weight */
+    buildingStore: publicUrl('assets/icons/icon-building-store.svg'),
     inStockCheck: publicUrl('assets/icons/icon-in-stock-check.svg'),
     starFilled: publicUrl('assets/icons/icon-star-filled.svg'),
     starEmpty: publicUrl('assets/icons/icon-star-empty.svg'),

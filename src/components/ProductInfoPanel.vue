@@ -42,9 +42,13 @@ function bump(delta: number) {
 
 const shipNoteHtml = computed(() => {
   return props.shipNote
-    .replace('FREE', '<strong class="free">FREE</strong>')
+    .replace('Free shipping', '<strong class="free">Free shipping</strong>')
     .replace(/(\d{5})/, '<span class="zip">$1</span>')
 })
+
+const kingsParkMapsUrl =
+  'https://www.google.com/maps/search/?api=1&query=' +
+  encodeURIComponent('490 Pulaski Road, Kings Park, NY 11754')
 </script>
 
 <template>
@@ -107,6 +111,20 @@ const shipNoteHtml = computed(() => {
     <div class="ship-banner">
       <img :src="media.icons.truckDelivery" width="25" height="19" alt="" />
       <p class="ship-banner__text" v-html="shipNoteHtml" />
+    </div>
+
+    <div class="ship-banner">
+      <img :src="media.icons.buildingStore" width="25" height="20" alt="" />
+      <p class="ship-banner__text">
+        <strong class="free">Free local pickup</strong> at
+        <a
+          class="ship-banner__link"
+          :href="kingsParkMapsUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Kings Park</a>
+        location.
+      </p>
     </div>
   </div>
 </template>
@@ -358,5 +376,16 @@ const shipNoteHtml = computed(() => {
 :deep(.zip) {
   color: var(--color-link);
   text-decoration: underline;
+}
+
+.ship-banner__link {
+  color: var(--color-link);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ship-banner__link:hover {
+  color: var(--color-dark-blue);
 }
 </style>

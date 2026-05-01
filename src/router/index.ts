@@ -73,6 +73,16 @@ const router = createRouter({
           component: () => import('../views/MyAccountView.vue'),
         },
         {
+          path: 'contact',
+          name: 'contact',
+          component: () => import('../views/ContactView.vue'),
+        },
+        {
+          path: 'about-us',
+          name: 'about-us',
+          component: () => import('../views/AboutUsView.vue'),
+        },
+        {
           path: 'privacy-policy',
           name: 'privacy-policy',
           component: () => import('../views/LegalInfoPageView.vue'),
