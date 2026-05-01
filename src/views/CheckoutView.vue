@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, inject, ref, useTemplateRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { DEFAULT_REFERENCE_ZIP, openZipCodeModal, storedReferenceZip } from '../layout/demoZip'
+import { LOCAL_PICKUP_LOCATION, localPickupMapsSearchUrl } from '../data/localPickup'
 import { cartLines as seedCartLines, cartSubtotal, type CartLine } from '../data/site'
 import { media } from '../assets/media'
 import { authKey } from '../layout/auth'
@@ -15,12 +17,34 @@ const subtotal = computed(() => cartSubtotal(lines.value))
 const taxRate = 0.08
 const tax = computed(() => Math.round(subtotal.value * taxRate * 100) / 100)
 
-type ShipMethodId = 'ground' | 'next'
-const shipMethodOptions = [
-  { id: 'ground' as const, label: 'FedEx Ground', amount: 0 },
-  { id: 'next' as const, label: 'FedEx Next Day', amount: 39.99 },
+type ShipMethodId = 'ground' | 'next' | 'pickup'
+
+type ShipMethodOption = {
+  id: ShipMethodId
+  label: string
+  amount: number
+  pickup?: boolean
+}
+
+const shipMethodOptions: ShipMethodOption[] = [
+  { id: 'ground', label: 'FedEx Ground', amount: 0 },
+  { id: 'next', label: 'FedEx Next Day', amount: 39.99 },
+  { id: 'pickup', label: 'Local pickup', amount: 0, pickup: true },
 ]
+
+const localPickupMapsUrl = localPickupMapsSearchUrl()
+
+const pickupZipDisplay = computed(
+  () => storedReferenceZip.value.trim() || zip.value.trim() || DEFAULT_REFERENCE_ZIP,
+)
+
+const localPickupCityLine = `${LOCAL_PICKUP_LOCATION.city}, ${LOCAL_PICKUP_LOCATION.stateCode} ${LOCAL_PICKUP_LOCATION.zip}`
 const selectedShipMethod = ref<ShipMethodId>('ground')
+
+function openPickupZipModal() {
+  selectedShipMethod.value = 'pickup'
+  openZipCodeModal()
+}
 const shippingLabel = computed(() => shipMethodOptions.find((m) => m.id === selectedShipMethod.value)!.label)
 const shippingAmount = computed(() => shipMethodOptions.find((m) => m.id === selectedShipMethod.value)!.amount)
 const grandTotal = computed(() => subtotal.value + shippingAmount.value + tax.value)
@@ -136,6 +160,11 @@ const shippingReviewLines = computed(() => {
     out.push(
       `${ship.label}${ship.amount === 0 ? ' — FREE' : ` — ${money(ship.amount)}`}`,
     )
+    if (ship.pickup) {
+      out.push(`Closest location to ${pickupZipDisplay.value}`)
+      out.push(LOCAL_PICKUP_LOCATION.streetLine)
+      out.push(localPickupCityLine)
+    }
   }
   return out
 })
@@ -626,7 +655,10 @@ const stepsMeta = [
                       v-for="m in shipMethodOptions"
                       :key="m.id"
                       class="pick-card pick-card--ship"
-                      :class="{ 'pick-card--selected': selectedShipMethod === m.id }"
+                      :class="{
+                        'pick-card--selected': selectedShipMethod === m.id,
+                        'pick-card--pickup': m.pickup,
+                      }"
                     >
                       <input
                         v-model="selectedShipMethod"
@@ -637,8 +669,33 @@ const stepsMeta = [
                       />
                       <span class="pick-card__body">
                         <span class="pick-card__title">{{ m.label }}</span>
-                        <span v-if="m.amount === 0" class="pick-card__price pick-card__price--free">FREE</span>
-                        <span v-else class="pick-card__price pick-card__price--paid">{{ money(m.amount) }}</span>
+                        <template v-if="m.pickup">
+                          <span class="pick-card__price pick-card__price--free">FREE</span>
+                          <span class="pick-card__sub pick-card__proximity">
+                            Closest location to
+                            <button
+                              type="button"
+                              class="pick-card__zip-link"
+                              aria-label="Change ZIP code for pickup location"
+                              @click.stop.prevent="openPickupZipModal"
+                            >
+                              {{ pickupZipDisplay }}
+                            </button>
+                          </span>
+                          <span class="pick-card__sub">{{ LOCAL_PICKUP_LOCATION.streetLine }}</span>
+                          <span class="pick-card__sub">{{ localPickupCityLine }}</span>
+                          <a
+                            class="pick-card__maps"
+                            :href="localPickupMapsUrl"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            >Open in Google Maps</a
+                          >
+                        </template>
+                        <template v-else>
+                          <span v-if="m.amount === 0" class="pick-card__price pick-card__price--free">FREE</span>
+                          <span v-else class="pick-card__price pick-card__price--paid">{{ money(m.amount) }}</span>
+                        </template>
                       </span>
                     </label>
                   </div>
@@ -750,7 +807,10 @@ const stepsMeta = [
                           v-for="m in shipMethodOptions"
                           :key="m.id"
                           class="pick-card pick-card--ship"
-                          :class="{ 'pick-card--selected': selectedShipMethod === m.id }"
+                          :class="{
+                            'pick-card--selected': selectedShipMethod === m.id,
+                            'pick-card--pickup': m.pickup,
+                          }"
                         >
                           <input
                             v-model="selectedShipMethod"
@@ -761,8 +821,33 @@ const stepsMeta = [
                           />
                           <span class="pick-card__body">
                             <span class="pick-card__title">{{ m.label }}</span>
-                            <span v-if="m.amount === 0" class="pick-card__price pick-card__price--free">FREE</span>
-                            <span v-else class="pick-card__price pick-card__price--paid">{{ money(m.amount) }}</span>
+                            <template v-if="m.pickup">
+                              <span class="pick-card__price pick-card__price--free">FREE</span>
+                              <span class="pick-card__sub pick-card__proximity">
+                                Closest location to
+                                <button
+                                  type="button"
+                                  class="pick-card__zip-link"
+                                  aria-label="Change ZIP code for pickup location"
+                                  @click.stop.prevent="openPickupZipModal"
+                                >
+                                  {{ pickupZipDisplay }}
+                                </button>
+                              </span>
+                              <span class="pick-card__sub">{{ LOCAL_PICKUP_LOCATION.streetLine }}</span>
+                              <span class="pick-card__sub">{{ localPickupCityLine }}</span>
+                              <a
+                                class="pick-card__maps"
+                                :href="localPickupMapsUrl"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                >Open in Google Maps</a
+                              >
+                            </template>
+                            <template v-else>
+                              <span v-if="m.amount === 0" class="pick-card__price pick-card__price--free">FREE</span>
+                              <span v-else class="pick-card__price pick-card__price--paid">{{ money(m.amount) }}</span>
+                            </template>
                           </span>
                         </label>
                       </div>
@@ -2562,6 +2647,54 @@ const stepsMeta = [
 
 .pick-card--ship .pick-card__body {
   gap: 2px;
+}
+
+.pick-card--pickup {
+  align-items: flex-start;
+}
+
+.pick-card--pickup .pick-card__radio {
+  margin-top: 3px;
+}
+
+.pick-card--pickup .pick-card__body {
+  gap: 6px;
+}
+
+.pick-card__maps {
+  align-self: flex-start;
+  width: fit-content;
+  max-width: 100%;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-light-blue);
+  text-decoration: none;
+}
+
+.pick-card__maps:hover {
+  text-decoration: underline;
+}
+
+.pick-card__proximity {
+  line-height: 1.4;
+}
+
+.pick-card__zip-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: inherit;
+  font-weight: 700;
+  color: var(--color-light-blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.pick-card__zip-link:hover {
+  color: var(--color-dark-blue);
 }
 
 .pick-card__edit {

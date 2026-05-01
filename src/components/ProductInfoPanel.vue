@@ -4,6 +4,8 @@ import StarRating from './StarRating.vue'
 import AddToCartButton from './AddToCartButton.vue'
 import { media } from '../assets/media'
 import type { BladeOption, DemoProduct } from '../data/products'
+import { DEFAULT_REFERENCE_ZIP, openZipCodeModal, storedReferenceZip } from '../layout/demoZip'
+import { localPickupMapsSearchUrl } from '../data/localPickup'
 import { favoritesKey } from '../layout/favorites'
 
 const props = defineProps<{
@@ -16,7 +18,6 @@ const props = defineProps<{
   reviewCount: number
   rating: number
   bladeOptions: BladeOption[]
-  shipNote: string
   cartProduct: DemoProduct
 }>()
 
@@ -40,15 +41,9 @@ function bump(delta: number) {
   qty.value = Math.max(1, Math.min(99, qty.value + delta))
 }
 
-const shipNoteHtml = computed(() => {
-  return props.shipNote
-    .replace('Free shipping', '<strong class="free">Free shipping</strong>')
-    .replace(/(\d{5})/, '<span class="zip">$1</span>')
-})
+const shipBannerZip = computed(() => storedReferenceZip.value.trim() || DEFAULT_REFERENCE_ZIP)
 
-const kingsParkMapsUrl =
-  'https://www.google.com/maps/search/?api=1&query=' +
-  encodeURIComponent('490 Pulaski Road, Kings Park, NY 11754')
+const kingsParkMapsUrl = localPickupMapsSearchUrl()
 </script>
 
 <template>
@@ -110,7 +105,12 @@ const kingsParkMapsUrl =
 
     <div class="ship-banner">
       <img :src="media.icons.truckDelivery" width="25" height="19" alt="" />
-      <p class="ship-banner__text" v-html="shipNoteHtml" />
+      <p class="ship-banner__text">
+        <strong class="free">Free shipping</strong> available to
+        <button type="button" class="ship-banner__zip" aria-label="Change ZIP code" @click="openZipCodeModal">
+          {{ shipBannerZip }}
+        </button>
+      </p>
     </div>
 
     <div class="ship-banner">
@@ -373,9 +373,21 @@ const kingsParkMapsUrl =
   color: var(--color-success);
 }
 
-:deep(.zip) {
+.ship-banner__zip {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
   color: var(--color-link);
   text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.ship-banner__zip:hover {
+  color: var(--color-dark-blue);
 }
 
 .ship-banner__link {

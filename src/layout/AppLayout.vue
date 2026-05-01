@@ -6,6 +6,7 @@ import SiteFooter from '../components/SiteFooter.vue'
 import SearchModal from '../components/SearchModal.vue'
 import MiniCartDrawer from '../components/MiniCartDrawer.vue'
 import ToastStack from '../components/ToastStack.vue'
+import ZipCodeModal from '../components/ZipCodeModal.vue'
 import type { DemoProduct } from '../data/products'
 import { cartLines as seedCartLines } from '../data/site'
 import type { CartLine } from '../data/site'
@@ -214,6 +215,7 @@ const headerFavoritesCount = computed(() => favoriteIds.value.length)
     <SearchModal :open="searchOpen" @close="searchOpen = false" />
     <MiniCartDrawer />
     <ToastStack />
+    <ZipCodeModal />
   </div>
 </template>
 

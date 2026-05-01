@@ -56,7 +56,6 @@ const pdpCartProduct = computed<DemoProduct>(() => ({
             :review-count="primaryProduct.reviewCount"
             :rating="primaryProduct.rating"
             :blade-options="primaryProduct.bladeOptions"
-            :ship-note="primaryProduct.shipNote"
             :cart-product="pdpCartProduct"
           />
         </aside>

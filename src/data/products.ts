@@ -51,8 +51,6 @@ export const primaryProduct = {
   reviewCount: 42,
   rating: 4.5,
   breadcrumbs: ['Shop', 'Van Interiors', 'Shelving Units'],
-  shipZip: '11754',
-  shipNote: 'Free shipping available to 11754',
   gallery: [
     {
       id: 'main',
